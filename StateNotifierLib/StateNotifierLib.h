@@ -27,15 +27,12 @@ public:
 	~CStateNotifierLib(void);
 	// TODO: add your methods here.
 
-	bool Init(std::string processName, int instance, std::string host, int port);
+	bool Init(const std::string& processName, int instance, const std::string& host, int port);
 	void SendJson(std::string message);
-	void SendStatus(std::string sequence, std::string stateName, std::map<std::string, std::string> params);
-	void SendEvent(std::string sequence, std::string eventName, std::map<std::string, std::string> params);
+	void EnterStatus(const std::string& sequence, const std::string& stateName, const std::map<std::string, std::string>& params);
+	void ExitStatus(const std::string& sequence, const std::string& stateName, const std::map<std::string, std::string>& params);
+	void SendEvent(const std::string& sequence, const std::string& eventName, const std::map<std::string, std::string>& params);
 
 private:
 	std::unique_ptr<CStateNotifierLibPimpl> _pimpl;
 };
-
-//extern STATENOTIFIERLIB_API int nStateNotifierLib;
-//
-//STATENOTIFIERLIB_API int fnStateNotifierLib(void);

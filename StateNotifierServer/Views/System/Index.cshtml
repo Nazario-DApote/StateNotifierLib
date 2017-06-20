@@ -1,0 +1,14 @@
+
+@{
+	ViewData["Title"] = "System State";
+}
+
+<h2>System State</h2>
+
+<div ng-controller="connectWebsocket" data-ng-init="connectWebsocket()">
+	<div ng-show="connected">
+		<p>StateNotifier server connected!</p>
+	</div>
+	<pre id="data" class="panel-success" style="max-height: 600px;"></pre>
+</div>
+
