@@ -8,6 +8,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StateNotifierLib", "StateNotifierLib\StateNotifierLib.vcxproj", "{2DADFB95-F40D-4BF2-BCEE-5354C543799D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StateNotifierLibTester", "StateNotifierLibTester\StateNotifierLibTester.vcxproj", "{3E9E0CC8-F735-4109-B241-C8168DF3D624}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D} = {2DADFB95-F40D-4BF2-BCEE-5354C543799D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

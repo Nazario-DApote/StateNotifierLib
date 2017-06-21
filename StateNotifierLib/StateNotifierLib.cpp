@@ -45,14 +45,16 @@ private:
 	string _processName;
 	string _host;
 	int _port;
-	bool _connected;
+	connectionCallback _onConnect, _onDisconnect;
 
 public:
 	string getProcess() { return _processName; }
 	int getInstance() { return _instance; }
+	void setCallbackOnConnect(connectionCallback fnct) { _onConnect = fnct; };
+	void setCallbackOnDisconnect(connectionCallback fnct) { _onDisconnect = fnct; };
 
-	CStateNotifierLibPimpl() :_id(0), _connected(false) {}
-	CStateNotifierLibPimpl(int n) :_id(n), _connected(false) {}
+	CStateNotifierLibPimpl() :_id(0) {}
+	CStateNotifierLibPimpl(int n) :_id(n) {}
 	~CStateNotifierLibPimpl()
 	{
 		stop();
@@ -61,7 +63,17 @@ public:
 
 	bool getConnected()
 	{
-		return _connected;
+		if (_psock.get() != NULL)
+		{
+			bool part1 = _psock.get()->poll(1000, StreamSocket::SELECT_READ);
+			bool part2 = (_psock.get()->available() == 0);
+			if (part1 && part2)
+				return false;
+			else
+				return true;
+		}
+
+		return false;
 	}
 
 	void addQueue(string msg)
@@ -71,6 +83,18 @@ public:
 			ScopedLock<Mutex> lock(_mutexQueue);
 			_workQueue.push(msg);
 		}
+	}
+
+	void notifyConnected()
+	{
+		if (_onConnect != NULL)
+			_onConnect();
+	}
+
+	void notifyDisconnected()
+	{
+		if (_onDisconnect != NULL)
+			_onDisconnect();
 	}
 
 	/// clear queue
@@ -83,7 +107,7 @@ public:
 
 	bool init(const string& processName, int instance, const string& host, int port)
 	{
-		if(!_connected)
+		if(!getConnected())
 		{
 			_processName = processName;
 			_instance = instance;
@@ -96,16 +120,16 @@ public:
 				SocketAddress endpoint(_host, _port);
 				unique_ptr<StreamSocket> socket_ptr(new StreamSocket(endpoint));
 				_psock.swap(socket_ptr);
-				_connected = true;
+				notifyConnected();
+				return true;
 			}
 			catch(NetException& e)
 			{
-				cerr << e.displayText() << endl;
-				_connected = false;
+				cerr << endl << e.displayText() << endl;
 			}
 		}
 
-		return _connected;
+		return false;
 	}
 
 	void stop()
@@ -114,29 +138,36 @@ public:
 		clearQueue();
 		// close socket
 		_psock.get()->shutdown();
-		_connected = false;
+		notifyDisconnected();
 	}
 
 	bool sendMsg(const string msg)
 	{
-		int len = msg.length();
-		int bytesToWrite = len + sizeof(int);
-		vector<char> buf(bytesToWrite);
-		fill(buf.begin(), buf.end(), 0);
-		auto buf_ptr = buf.data();
-		memcpy(buf_ptr, static_cast<void*>(&len), sizeof(int)); // set message size in head
-		memcpy(buf_ptr + sizeof(int), msg.c_str(), len);		// set message content
-		int tmp = 0;
-		try {
-			while (bytesToWrite > tmp) {
-				tmp += _psock.get()->sendBytes(buf_ptr + tmp, bytesToWrite - tmp);
+		if (getConnected())
+		{
+			int len = msg.length();
+			int bytesToWrite = len + sizeof(int);
+			vector<char> buf(bytesToWrite);
+			fill(buf.begin(), buf.end(), 0);
+			auto buf_ptr = buf.data();
+			memcpy(buf_ptr, static_cast<void*>(&len), sizeof(int)); // set message size in head
+			memcpy(buf_ptr + sizeof(int), msg.c_str(), len);		// set message content
+			int tmp = 0;
+			try {
+				while (bytesToWrite > tmp) {
+					tmp += _psock.get()->sendBytes(buf_ptr + tmp, bytesToWrite - tmp);
+				}
+				return true;
 			}
-			return true;
-		}
-		catch (NetException error) {
+			catch (NetException error) {
 #if _DEBUG
-			cout << "recv failed (Error: " << error.displayText() << ')' << endl;
+				cout << "\nrecv failed (Error: " << error.displayText() << ')' << endl;
 #endif
+				return false;
+			}
+		}
+		else
+		{
 			return false;
 		}
 	}
@@ -158,12 +189,22 @@ public:
 				}
 				catch (NetException& e)
 				{
-					cout << "NetException: " << e.what();
+					cout << "\nNetException: " << e.what();
+					if (!getConnected())
+						break;
 				}
 				catch (exception &e)
 				{
-					cout << "Exception: " << e.what();
+					cout << "\nException: " << e.what();
+					if (!getConnected())
+						break;
 				}
+			}
+
+			if (!getConnected())
+			{
+				stop();
+				break;
 			}
 
 			Thread::sleep(100);
@@ -215,11 +256,6 @@ void build_state(Object * const result,
 	result->set("parameters", inner);
 }
 
-void CStateNotifierLib::SendJson(string message)
-{
-	_pimpl->addQueue(message);
-}
-
 void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
@@ -228,7 +264,7 @@ void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateN
 	json->stringify(os, 1);
 	string s = os.str();
 #ifdef _DEBUG
-	cout << s << endl;
+	cout << endl << s << endl;
 #endif
 	_pimpl->addQueue(s);
 }
@@ -241,7 +277,7 @@ void CStateNotifierLib::ExitStatus(const string& sequence, const string& stateNa
 	json->stringify(os, 1);
 	string s = os.str();
 #ifdef _DEBUG
-	cout << s << endl;
+	cout << endl << s << endl;
 #endif
 	_pimpl->addQueue(s);
 }
@@ -254,9 +290,24 @@ void CStateNotifierLib::SendEvent(const string& sequence, const string& eventNam
 	json->stringify(os, 1);
 	string s = os.str();
 #ifdef _DEBUG
-	cout << s << endl;
+	cout << endl << s << endl;
 #endif
 	_pimpl->addQueue(s);
+}
+
+void CStateNotifierLib::setCallbackOnConnect(connectionCallback fnct)
+{
+	_pimpl->setCallbackOnConnect(fnct);
+};
+
+void CStateNotifierLib::setCallbackOnDisconnect(connectionCallback fnct)
+{
+	_pimpl->setCallbackOnDisconnect(fnct);
+};
+
+bool CStateNotifierLib::getConnected()
+{
+	return _pimpl->getConnected();
 }
 
 CStateNotifierLib::~CStateNotifierLib()

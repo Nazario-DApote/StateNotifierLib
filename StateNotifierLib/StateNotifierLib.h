@@ -2,6 +2,9 @@
 
 #include <string>
 #include <map>
+#include <functional>
+
+typedef std::function<void()> connectionCallback;
 
 // The following ifdef block is the standard way of creating macros which make exporting
 // from a DLL simpler. All files within this DLL are compiled with the STATENOTIFIERLIB_EXPORTS
@@ -25,10 +28,12 @@ class STATENOTIFIERLIB_API CStateNotifierLib {
 public:
 	CStateNotifierLib(void);
 	~CStateNotifierLib(void);
-	// TODO: add your methods here.
+
+	void setCallbackOnConnect(connectionCallback fnct);
+	void setCallbackOnDisconnect(connectionCallback fnct);
+	bool getConnected();
 
 	bool Init(const std::string& processName, int instance, const std::string& host, int port);
-	void SendJson(std::string message);
 	void EnterStatus(const std::string& sequence, const std::string& stateName, const std::map<std::string, std::string>& params);
 	void ExitStatus(const std::string& sequence, const std::string& stateName, const std::map<std::string, std::string>& params);
 	void SendEvent(const std::string& sequence, const std::string& eventName, const std::map<std::string, std::string>& params);

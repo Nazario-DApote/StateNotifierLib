@@ -10,20 +10,31 @@
 #include <map>
 #include <Windows.h>
 
+std::string procName = "thisProc";
+int instance = 0;
+
+void OnConnected()
+{
+	printf("\nConnected to the server via TCP\\IP: localhost:1466");
+}
+
+void OnDisconnected()
+{
+	printf("\nServer disconnected!");
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	std::string procName = "thisProc";
-	int instance = 0;
-
 	std::map<std::string, std::string> mp;
 	mp.insert(std::pair<std::string, std::string>("param1", "value1"));
 	mp.insert(std::pair<std::string, std::string>("param2", "value2"));
 
 	auto stdnotif = new CStateNotifierLib();
+	stdnotif->setCallbackOnConnect(std::bind(OnConnected));
+	stdnotif->setCallbackOnDisconnect(std::bind(OnDisconnected));
 
 	if (stdnotif->Init(procName, instance, "localhost", 1466))
 	{
-		printf("\nConnected to the server via TCP\\IP: localhost:1466");
 		while (true)
 		{
 			printf("\n Press 'S' to send state");
@@ -45,7 +56,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	else
 	{
-		printf("\nCannot connect to the server");
+		printf("\nCannot connect to the server\n");
 		system("pause");
 	}
 
