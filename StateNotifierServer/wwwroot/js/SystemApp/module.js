@@ -8,6 +8,7 @@
 		// Custom modules
 
 		// 3rd Party Modules
-		'ngWebSocket'
+		'ngWebSocket',
+		'angular-uuid'
 	]);
 })();

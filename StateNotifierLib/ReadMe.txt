@@ -72,7 +72,21 @@ Esempio:
 {
 	"process": "PumpManager",
 	"instance": 0,
-	"type": "EVENT",
+	"type": "EVENT_EMIT",
+	"to": "",
+	"name":
+	"startTime" : "2017-06-20T07:21:59Z",
+	"paramters" : {
+		"param1": "value1",
+		"param2": "value2",
+	}
+}
+
+{
+	"process": "PumpManager",
+	"instance": 0,
+	"type": "EVENT_RECV",
+	"from": "",
 	"name":
 	"startTime" : "2017-06-20T07:21:59Z",
 	"paramters" : {

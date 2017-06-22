@@ -282,10 +282,12 @@ void CStateNotifierLib::ExitStatus(const string& sequence, const string& stateNa
 	_pimpl->addQueue(s);
 }
 
-void CStateNotifierLib::SendEvent(const string& sequence, const string& eventName, const map<string, string>& params)
+void CStateNotifierLib::EventEmit(const string& sequence, const string& eventName, const std::string& to, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT", params);
+	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_EMIT", params);
+	json->set("to", to);
+	json->set("from", _pimpl->getProcess());
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
@@ -294,6 +296,37 @@ void CStateNotifierLib::SendEvent(const string& sequence, const string& eventNam
 #endif
 	_pimpl->addQueue(s);
 }
+
+void CStateNotifierLib::EventRecv(const string& sequence, const string& eventName, const std::string& from, const map<string, string>& params)
+{
+	auto json = auto_ptr<Object>(new Object);
+	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_RECV", params);
+	json->set("from", from);
+	json->set("to", _pimpl->getProcess());
+	ostringstream os;
+	json->stringify(os, 1);
+	string s = os.str();
+#ifdef _DEBUG
+	cout << endl << s << endl;
+#endif
+	_pimpl->addQueue(s);
+}
+
+void CStateNotifierLib::Event(const string& sequence, const string& eventName, const map<string, string>& params)
+{
+	auto json = auto_ptr<Object>(new Object);
+	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_EMIT", params);
+	json->set("from", _pimpl->getProcess());
+	json->set("to", _pimpl->getProcess());
+	ostringstream os;
+	json->stringify(os, 1);
+	string s = os.str();
+#ifdef _DEBUG
+	cout << endl << s << endl;
+#endif
+	_pimpl->addQueue(s);
+}
+
 
 void CStateNotifierLib::setCallbackOnConnect(connectionCallback fnct)
 {

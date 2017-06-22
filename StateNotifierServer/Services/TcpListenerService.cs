@@ -123,10 +123,10 @@ namespace StateNotifierServer.Services
 
 	public enum Commands
 	{
-		INIT,
 		ENTERSTATE,
 		EXITSTATE,
-		EVENT,
+		EVENT_EMIT,
+		EVENT_RECV,
 	}
 
 	public class Message
@@ -143,13 +143,19 @@ namespace StateNotifierServer.Services
 		[JsonProperty("startTime", Required = Required.Always)]
 		public DateTime StartTime { get; set; }
 
-		[JsonProperty("sequence", Required = Required.AllowNull)]
+		[JsonProperty("sequence", NullValueHandling = NullValueHandling.Ignore)]
 		public string Sequence { get; set; }
 
 		[JsonProperty("name", Required = Required.Always)]
 		public string Eventname { get; set; }
 
-		[JsonProperty("parameters", Required = Required.AllowNull)]
+		[JsonProperty("from", NullValueHandling = NullValueHandling.Ignore)]
+		public string From { get; set; }
+
+		[JsonProperty("to", NullValueHandling = NullValueHandling.Ignore)]
+		public string To { get; set; }
+
+		[JsonProperty("parameters", NullValueHandling = NullValueHandling.Ignore)]
 		public Dictionary<string, string> Parameters { get; set; }
 	}
 
