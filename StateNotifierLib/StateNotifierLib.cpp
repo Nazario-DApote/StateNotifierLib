@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include <queue>
-#include <excpt.h>
 #include <algorithm>
 #include <memory>
 #include "StateNotifierLib.h"
@@ -15,7 +14,7 @@
 #include "Poco/Exception.h"
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/StreamSocket.h"
-#include "Poco/Net/SocketStream.h"
+#include "Poco/Buffer.h"
 
 using Poco::DateTimeFormatter;
 using Poco::DateTimeFormat;
@@ -28,8 +27,9 @@ using Poco::ScopedLock;
 using Poco::JSON::Object;
 using Poco::Net::SocketAddress;
 using Poco::Net::StreamSocket;
-using Poco::Net::SocketStream;
+using Poco::Exception;
 using Poco::Net::NetException;
+using Poco::Buffer;
 
 using namespace std;
 
@@ -107,6 +107,11 @@ public:
 
 	bool init(const string& processName, int instance, const string& host, int port)
 	{
+		poco_assert(processName.length() > 0);
+		poco_assert(instance >= 0);
+		poco_assert(host.length() > 0);
+		poco_assert(65536 > port && port >= 1024);
+
 		if(!getConnected())
 		{
 			_processName = processName;
@@ -147,9 +152,9 @@ public:
 		{
 			int len = msg.length();
 			int bytesToWrite = len + sizeof(int);
-			vector<char> buf(bytesToWrite);
+			Buffer<char> buf(bytesToWrite);
 			fill(buf.begin(), buf.end(), 0);
-			auto buf_ptr = buf.data();
+			auto buf_ptr = buf.begin();
 			memcpy(buf_ptr, static_cast<void*>(&len), sizeof(int)); // set message size in head
 			memcpy(buf_ptr + sizeof(int), msg.c_str(), len);		// set message content
 			int tmp = 0;
@@ -193,7 +198,7 @@ public:
 					if (!getConnected())
 						break;
 				}
-				catch (exception &e)
+				catch (Exception &e)
 				{
 					cout << "\nException: " << e.what();
 					if (!getConnected())
@@ -236,6 +241,10 @@ void build_state(Object * const result,
 	const string& type,
 	const map<string, string>& params)
 {
+	poco_assert(process.length() > 0);
+	poco_assert(instance >= 0);
+	poco_assert(type.length() > 0);
+
 	Timestamp now;
 
 	// smart pointer, so don't worry about cleaning up
@@ -284,6 +293,7 @@ void CStateNotifierLib::ExitStatus(const string& sequence, const string& stateNa
 
 void CStateNotifierLib::EventEmit(const string& sequence, const string& eventName, const std::string& to, const map<string, string>& params)
 {
+	poco_assert(to.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
 	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_EMIT", params);
 	json->set("to", to);
@@ -299,6 +309,7 @@ void CStateNotifierLib::EventEmit(const string& sequence, const string& eventNam
 
 void CStateNotifierLib::EventRecv(const string& sequence, const string& eventName, const std::string& from, const map<string, string>& params)
 {
+	poco_assert(from.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
 	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_RECV", params);
 	json->set("from", from);

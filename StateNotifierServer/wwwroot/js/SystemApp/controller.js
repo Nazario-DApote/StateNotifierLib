@@ -1,6 +1,14 @@
 ﻿(function () {
 	'use strict';
 
+	Array.prototype.max = function () {
+		return Math.max.apply(null, this);
+	};
+
+	Array.prototype.min = function () {
+		return Math.min.apply(null, this);
+	};
+
 	angular
 		.module('system.module')
 		.controller('connectWebsocket', connectWebsocket);
@@ -9,13 +17,11 @@
 
 	function connectWebsocket($scope, $rootScope, $websocket, uuid, $window) {
 
-		$scope.canvas = new Canvas();
-		$scope.movie = initCanvas();
+		$scope.canvas = new Canvas($window.innerWidth);
+		$scope.movie = initializeMove();
 		$scope.movie.on('message:ready', function () {
 			$scope.movieReady = true;
 		});
-
-		$scope.first = 0;
 
 		$scope.connected = !angular.isUndefined($rootScope.ws) && $rootScope.ws !== null && !$rootScope.ws.readyState === 'OPEN';
 		function string2Bin(str) {
@@ -61,16 +67,7 @@
 					var data = angular.fromJson(event.data);
 
 					console.log("Window width:" + $window.innerWidth);
-					var maxSteps = $window.innerWidth / 80 - 3;
-					console.log("Max states per view:" + maxSteps);
-
-					if ($scope.first >= maxSteps) {
-						$scope.movie.sendMessage("clear", $scope.canvas);
-						$scope.canvas = new Canvas();
-						$scope.first = 0;
-					}
-					else
-						$scope.first += 1;
+					console.log("Max states per view:" + $scope.canvas.MaxSteps());
 
 					var dev;
 					if (!$scope.canvas.Devices.find(function (elem) { var res = elem.name === data.process; if (res) dev = elem; return res; }))
@@ -81,7 +78,23 @@
 						dev.instance = data.instance;
 						$scope.canvas.Devices.push(dev);
 					}
-					if (data.type <= 2)
+
+					var currentTimeLine = 0;
+					$scope.canvas.Devices.forEach(function (d) {
+						if(d.name !== dev.name)
+							currentTimeLine = Math.max(currentTimeLine, d.States.length-1);
+						else
+							currentTimeLine = Math.max(currentTimeLine, d.States.length);
+					});
+					if (currentTimeLine >= $scope.canvas.MaxSteps()) {
+						$scope.movie.sendMessage("clear", $scope.canvas);
+						$scope.canvas = new Canvas($window.innerWidth);
+						dev.States = [];
+						$scope.canvas.Devices.push(dev);
+						currentTimeLine = 0;
+					}
+
+					if (data.type <= 2) // is a STATE change message
 					{
 						var newState = new State();
 						newState.name = data.name;
@@ -89,9 +102,13 @@
 						newState.sequence = data.sequence;
 						newState.startTime = data.startTime;
 						newState.parameters = data.parameters;
-						dev.States.push(newState);
+						for (var i = 0; i < currentTimeLine; i++) {
+							if (!dev.States[i])
+								dev.States[i] = {};
+						}
+						dev.States[currentTimeLine] = newState;
 					}
-					else
+					else // is EVENT message
 					{
 						var newEvent = new Event();
 						newEvent.uuid = uuid.v4();

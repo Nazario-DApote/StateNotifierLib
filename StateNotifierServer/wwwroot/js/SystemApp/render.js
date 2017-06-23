@@ -17,19 +17,25 @@ var Event = function () {
 
 // Device class definition
 var Device = function () {
-	this.process = "";
+	this.name = "";
 	this.instance = 0;
-	this.States = new Array(); // array of State objects
-	this.MaxStates = 10;
-	this.Events = new Array(); // array of Event objects
+	this.States = []; // array of State objects
+	this.Events = []; // array of Event objects
 };
 
 // System class definition
-var Canvas = function () {
-	this.Devices = new Array();   // array of Device objects
+var Canvas = function (windowWidth) {
+	this.windowWidth = windowWidth;
+	this.colSize = 80;
+	this.rowSize = 80;
+	this.spaceBetweenRows = 15;
+	this.spaceBetweenCols = 25;
+	this.Devices = [];   // array of Device objects
 };
 
-function initCanvas() {
+Canvas.prototype.MaxSteps = function () { return Math.floor(this.windowWidth / (this.colSize + this.spaceBetweenCols) - 1); }
+
+function initializeMove() {
 	var movie = bonsai.run(document.getElementById('movie'), {
 		code: function () {
 			var renderedObjects = {};
@@ -46,59 +52,106 @@ function initCanvas() {
 			});
 			stage.on('message', function (data) {
 
+				var canvas = data.canvas;
+				if (!canvas) return;
+
 				if (!renderedObjects)
 					renderedObjects = {};
 
-				var canvas = data.canvas;
-				if (canvas === null || canvas === 'undefined')
-					return;
-
-				var rowI = defSize = 40;
-				var colI = 40;
-				var rowIncr = rowI * 2;
-				var colIncr = colI * 2;
+				var spaceBetweenRows = canvas.spaceBetweenRows;
+				var spaceBetweenCols = canvas.spaceBetweenCols;
+				var colSize = canvas.colSize;
+				var rowSize = canvas.rowSize;
+				var devPosX = 0;
+				var devPosY = 5;
+				var steps = canvas.Devices.length;
+				var devStateHue = color('hsl(83, 100%, 50%, 1)'); // useful calculator: http://hslpicker.com/#9dff00
+				var devTextColor = color('red').darker();
+				var devFontSize = 15
+				var circleRadius = rowSize / 2 + devPosY;
 
 				canvas.Devices.forEach(function (dev) {
+
+					if (!dev || !dev.name) return;
+
 					var devKey = dev.name;
 					if (!renderedObjects.hasOwnProperty(devKey)) {
-						// Draw the processName
+						// Draw the deviceName
 						renderedObjects[devKey] = new Text(dev.name).attr({
 							fontFamily: 'Arial, sans-serif',
-							fontSize: '20',
-							textStrokeColor: 'red',
-							textFillColor: 'red',
-							x: colI - defSize,
-							y: rowI - defSize + rowI / 2
+							fontSize: devFontSize,
+							textStrokeColor: devTextColor,
+							textFillColor: devTextColor,
+							x: devPosX,
+							y: devPosY + colSize / 2 - devFontSize
 						});
 						renderedObjects[devKey].addTo(stage);
 					}
 
-					colI += colIncr;
-
+					var statePosX = devPosX + colSize; // start circle position
+					var statePosY = devPosY;
 					dev.States.forEach(function (state) {
+
+						if (!state || !state.name) {
+							statePosX += colSize + spaceBetweenCols; // increment state position
+							return;
+						}
+
 						// Draw the circle
 						if (!renderedObjects.hasOwnProperty(state.uuid)) {
-							renderedObjects[state.uuid] = new Circle(colI, rowI, defSize).attr('fillColor', 'green');
+							renderedObjects[state.uuid] = new Circle(statePosX + colSize / 2, statePosY + rowSize / 2, circleRadius)
+								.attr('fillColor', devStateHue)
+								.stroke(devStateHue.midpoint('black'), 0.5);
+
 							renderedObjects[state.uuid].addTo(stage);
 						}
 
 						// Draw the state name
+						var stateTextsPosY = statePosY;
 						var stateTextKey = state.uuid + "_text";
 						if (!renderedObjects.hasOwnProperty(stateTextKey)) {
 							renderedObjects[stateTextKey] = new Text(state.name).attr({
 								fontFamily: 'Arial, sans-serif',
 								fontSize: '8',
 								textStrokeColor: 'black',
-								x: colI - defSize,
-								y: rowI - defSize
+								x: statePosX,
+								y: stateTextsPosY
 							});
 							renderedObjects[stateTextKey].addTo(stage);
 						}
 
+						// Draw the sequence name
+						stateTextsPosY += 10;
+						var stateSeqTextKey = state.uuid + "_seq_text";
+						if (!renderedObjects.hasOwnProperty(stateSeqTextKey)) {
+							renderedObjects[stateSeqTextKey] = new Text(state.sequence).attr({
+								fontFamily: 'Arial, sans-serif',
+								fontSize: '8',
+								textStrokeColor: 'black',
+								x: statePosX,
+								y: stateTextsPosY
+							});
+							renderedObjects[stateSeqTextKey].addTo(stage);
+						}
+
+						// Draw the statrttime
+						stateTextsPosY += 10;
+						var stateSeqTextKey = state.uuid + "_time_text";
+						if (!renderedObjects.hasOwnProperty(stateSeqTextKey)) {
+							renderedObjects[stateSeqTextKey] = new Text(state.startTime).attr({
+								fontFamily: 'Arial, sans-serif',
+								fontSize: '2',
+								textStrokeColor: 'black',
+								x: statePosX,
+								y: stateTextsPosY
+							});
+							renderedObjects[stateSeqTextKey].addTo(stage);
+						}
+
 						// Draw the state parameters
-						var colParam = colI - defSize;
-						var rowParam = rowI - defSize;
+						var paramStatePosY = stateTextsPosY;
 						for (var property in state.parameters) {
+							paramStatePosY += 10;
 							var stateParamTextKey = state.uuid + "_" + property;
 							if (!renderedObjects.hasOwnProperty(stateParamTextKey)) {
 								var value = state.parameters[property];
@@ -106,20 +159,24 @@ function initCanvas() {
 									fontFamily: 'Arial, sans-serif',
 									fontSize: '5',
 									textStrokeColor: 'black',
-									x: colParam,
-									y: rowParam + 10
+									x: statePosX,
+									y: paramStatePosY
 								});
 								renderedObjects[stateParamTextKey].addTo(stage);
-								rowParam += 10;
 							}
-						}
+						} // forEach parameters
 
-						colI += colIncr;
-					});
+						statePosX += colSize + spaceBetweenCols; // increment state position
+					}); // forEach state
 
-					rowI += rowIncr;
-				});
-			});
+					// increment device position
+					devPosY += rowSize + spaceBetweenRows;
+					devStateHue.hue(devStateHue.hue() + 1 / steps);
+
+				}); // forEach device
+
+			}); // end rendering
+
 			stage.sendMessage('ready', {});
 
 			//stage.on('mouseover pointerdown', function (e) {

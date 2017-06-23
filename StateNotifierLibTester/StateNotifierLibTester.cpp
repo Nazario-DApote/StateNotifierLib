@@ -9,57 +9,117 @@
 #include <algorithm>
 #include <map>
 #include <Windows.h>
+#include "Poco\Util\Application.h"
+#include "Poco\Util\Option.h"
+#include "Poco\Util\HelpFormatter.h"
 
-std::string procName = "thisProc";
-int instance = 0;
+using Poco::Util::Application;
+using Poco::Util::Option;
+using Poco::Util::OptionSet;
+using Poco::Util::OptionCallback;
+using Poco::Util::HelpFormatter;
 
-void OnConnected()
+class StateNotifierTester : public Application
 {
-	printf("\nConnected to the server via TCP\\IP: localhost:1466");
-}
+public:
+	StateNotifierTester():
+		_helpRequested(false),
+		_procName("thisProc"),
+		_instance(0) {
+	}
 
-void OnDisconnected()
-{
-	printf("\nServer disconnected!");
-}
+private:
+	std::string _procName;
+	int _instance;
+	bool _helpRequested;
 
-int _tmain(int argc, _TCHAR* argv[])
-{
-	std::map<std::string, std::string> mp;
-	mp.insert(std::pair<std::string, std::string>("param1", "value1"));
-	mp.insert(std::pair<std::string, std::string>("param2", "value2"));
+protected:
 
-	auto stdnotif = new CStateNotifierLib();
-	stdnotif->setCallbackOnConnect(std::bind(OnConnected));
-	stdnotif->setCallbackOnDisconnect(std::bind(OnDisconnected));
-
-	if (stdnotif->Init(procName, instance, "localhost", 1466))
+	// override Application virtual method
+	void defineOptions(OptionSet& options)
 	{
-		while (true)
+		Application::defineOptions(options);
+
+		options.addOption(
+			Option("help", "h", "display argument help information")
+			.required(false)
+			.repeatable(false)
+			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handleHelp)));
+	}
+
+	void handleHelp(const std::string& name, const std::string& value)
+	{
+		HelpFormatter helpFormatter(options());
+		helpFormatter.setCommand(commandName());
+		helpFormatter.setUsage("StateNotifierTester <OPTIONS> <Process>Name");
+		helpFormatter.setUsage("OPTIONS");
+		helpFormatter.setAutoIndent();
+		helpFormatter.setHeader("A tester for StateNotifierLib library");
+		helpFormatter.setFooter("Nazario D'Apote");
+		helpFormatter.format(std::cout);
+		stopOptionsProcessing();
+		_helpRequested = true;
+	}
+
+	virtual int main(const std::vector<std::string> &args)
+	{
+		if (!_helpRequested)
 		{
-			printf("\n Press 'S' to send state");
-			printf("\n Press 'Q' to exit");
-
-			int c = _getch();
-
-			if (c == 's')
+			if (args.size() > 0)
 			{
-				stdnotif->EnterStatus("Seq1", "begin send", mp);
-				printf("\n");
+				_procName = args[0];
 			}
-			else if (c == 'q')
+			std::map<std::string, std::string> mp;
+			mp.insert(std::pair<std::string, std::string>("param1", "value1"));
+			mp.insert(std::pair<std::string, std::string>("param2", "value2"));
+
+			auto stdnotif = new CStateNotifierLib();
+			stdnotif->setCallbackOnConnect(std::bind(&StateNotifierTester::OnConnected, this));
+			stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
+
+			if (stdnotif->Init(_procName, _instance, "localhost", 1466))
 			{
-				exit(0);
+				while (true)
+				{
+					printf("\n Press 'S' to send state");
+					printf("\n Press 'Q' to exit");
+
+					int c = _getch();
+
+					if (c == 's')
+					{
+						stdnotif->EnterStatus("Seq1", "begin send", mp);
+						printf("\n");
+					}
+					else if (c == 'q')
+					{
+						exit(0);
+					}
+				}
+
+			}
+			else
+			{
+				printf("\nCannot connect to the server\n");
+				system("pause");
 			}
 		}
 
-	}
-	else
-	{
-		printf("\nCannot connect to the server\n");
-		system("pause");
+		return EXIT_OK;
 	}
 
-	return 0;
-}
+	void OnConnected()
+	{
+		printf("\nConnected to the server via TCP\\IP: localhost:1466");
+	}
+
+	void OnDisconnected()
+	{
+		printf("\nServer disconnected!");
+	}
+
+};
+
+// entry point
+POCO_APP_MAIN(StateNotifierTester);
 

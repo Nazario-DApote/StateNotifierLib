@@ -31,6 +31,10 @@ namespace StateNotifierServer.Services
 
 		private IWsNotifier _notifier;
 
+		private List<Task> _connections;
+
+		private readonly object _lock = new Object(); // sync lock
+
 		public TcpListenerService(
 			IOptions<TcpListenerServiceConfig> options,
 			ILogger<TcpListenerService> logger,
@@ -40,12 +44,13 @@ namespace StateNotifierServer.Services
 			_logger = logger;
 			_notifier = notifier;
 			_cancellationTokenSource = new CancellationTokenSource();
-
+			_connections = new List<Task>(); // pending connections
 			_listener = new TcpListener(IPAddress.Any, _config.Port);
 		}
 
 		public void Dispose()
 		{
+			_cancellationTokenSource.Cancel();
 			_listener.Stop();
 			_listener.Server.Dispose();
 		}
@@ -61,28 +66,58 @@ namespace StateNotifierServer.Services
 				while (true)
 				{
 					_logger.LogInformation("Waiting for client...");
+					_cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-					using (var client = await _listener.AcceptTcpClientAsync())
-					{
-						try
-						{
-							await ManageClientConnectionLoop(client, _cancellationTokenSource.Token);
-						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex.Message);
-							client.Dispose();
-						}
-					}
+					var client = await _listener.AcceptTcpClientAsync();
+					_logger.LogInformation("[Server] Client has connected");
+					var task = StartHandleConnectionAsync(client, _cancellationTokenSource.Token);
+					// if already faulted, re-throw any error on the calling context
+					if (task.IsFaulted)
+						task.Wait();
 				}
 			}
 		}
 
-		private async Task ManageClientConnectionLoop(TcpClient client, CancellationToken ct)
+		// Register and handle the connection
+		private async Task StartHandleConnectionAsync(TcpClient tcpClient, CancellationToken ct)
 		{
+			// start the new connection task
+			var connectionTask = HandleConnectionAsync(tcpClient, _cancellationTokenSource.Token);
+
+			// add it to the list of pending task
+			lock (_lock)
+				_connections.Add(connectionTask);
+
+			// catch all errors of HandleConnectionAsync
+			try
+			{
+				await connectionTask;
+				// we may be on another thread after "await"
+			}
+			catch (Exception ex)
+			{
+				// log the error
+				_logger.LogError(ex.Message);
+				tcpClient.Dispose();
+			}
+			finally
+			{
+				// remove pending task
+				lock (_lock)
+					_connections.Remove(connectionTask);
+			}
+		}
+
+		private async Task HandleConnectionAsync(TcpClient client, CancellationToken ct)
+		{
+			await Task.Yield();
+			// continue asynchronously on another threads
+
 			_logger.LogInformation("Client connected. Waiting for data.");
 			while (true)
 			{
+				ct.ThrowIfCancellationRequested();
+
 				using (var msResponse = new MemoryStream())
 				{
 					var networkStream = client.GetStream();

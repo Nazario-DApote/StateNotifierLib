@@ -1,0 +1,30 @@
+var myShapeA = new Rect(0, 0, 50, 50).addTo(stage).attr('fillColor', 'red');
+var myShapeB = new Rect(0, 50, 50, 50).addTo(stage).attr('fillColor', 'blue');
+var myAnimation = new Animation('1s', {
+  x: 100,
+  fillColor: 'green'
+});
+myAnimation.play([myShapeA, myShapeB]);
+
+
+new Path()
+  .moveTo(0, 0)
+  .lineTo(100, 100)
+  .lineTo(0, 100)
+  .moveTo(100,100)
+  .lineTo(200,200)
+  .stroke('red', 2)
+  .addTo(stage);
+  
+new Circle(100, 100, 30)
+	.stroke('blue', 1)
+	.fill('red')
+	.addTo(stage);
+
+new Text('Look at me').addTo(stage).attr({
+  fontFamily: 'Arial, sans-serif',
+  fontSize: '5',
+  textFillColor: 'black',
+  textStrokeColor: 'black',
+  textStrokeWidth: 0.1
+});

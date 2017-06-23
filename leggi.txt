@@ -1,0 +1,14 @@
+1) Avvio del server
+
+- installare dotnet-win-x64.1.0.5 o dotnet-win-x86.1.0.5 secondo l'architettura della propria macchina
+- andare nella cartella shared\Innovation2017\PublishOutput 
+- aprire una cmd shell e lanciare: 
+	
+	SET ASPNETCORE_URLS=https://*:5245 && dotnet StateNotifierServer.dll
+
+- aprire il browser all'url: http://localhost:5245/System
+
+2) Avvio del client
+
+
+lanciare shared\Innovation2017\StateNotifierLib\Debug\StateNotifierLibTester.exe
