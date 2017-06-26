@@ -17,11 +17,14 @@
 
 	function connectWebsocket($scope, $rootScope, $websocket, uuid, $window) {
 
-		$scope.canvas = new Canvas($window.innerWidth);
-		$scope.movie = initializeMove();
-		$scope.movie.on('message:ready', function () {
-			$scope.movieReady = true;
-		});
+		if (typeof Canvas === 'function') // check class defined
+		{
+			$scope.canvas = new Canvas($window.innerWidth);
+			$scope.movie = initializeMove();
+			$scope.movie.on('message:ready', function () {
+				$scope.movieReady = true;
+			});
+		}
 
 		$scope.connected = !angular.isUndefined($rootScope.ws) && $rootScope.ws !== null && !$rootScope.ws.readyState === 'OPEN';
 		function string2Bin(str) {
@@ -43,12 +46,13 @@
 			{
 				// instance of ngWebsocket, handled by $websocket service
 				$rootScope.ws = $websocket('ws://localhost:5245/ws');
+				$rootScope.ws.reconnectIfNotNormalClose = true;
 
 				$rootScope.ws.onOpen(function () {
 					console.log("WEBSOCKET CONNECTED");
-					// set operative
 					$scope.connected = true;
-					if ($scope.movieReady) {
+					// set operative
+					if (typeof Canvas === 'function' && $scope.movieReady) {
 						$scope.movie.sendMessage({
 							canvas: $scope.canvas
 						});
@@ -64,6 +68,13 @@
 					console.log("NEW EVENT ARRIVED");
 					appendText(event.data);
 					console.log(event.data);
+
+					if (typeof Canvas !== 'function') // check class defined
+					{
+						$scope.$apply();
+						return;
+					}
+
 					var data = angular.fromJson(event.data);
 
 					console.log("Window width:" + $window.innerWidth);

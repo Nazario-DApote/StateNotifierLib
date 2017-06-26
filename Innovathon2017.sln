@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StateNotifierServer", "StateNotifierServer\StateNotifierServer.csproj", "{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D} = {2DADFB95-F40D-4BF2-BCEE-5354C543799D}
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624} = {3E9E0CC8-F735-4109-B241-C8168DF3D624}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StateNotifierLib", "StateNotifierLib\StateNotifierLib.vcxproj", "{2DADFB95-F40D-4BF2-BCEE-5354C543799D}"
 EndProject
@@ -14,32 +18,56 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StateNotifierLibTester", "S
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_Static|Any CPU = Debug_Static|Any CPU
+		Debug_Static|x86 = Debug_Static|x86
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x86 = Debug|x86
+		Release_Static|Any CPU = Release_Static|Any CPU
+		Release_Static|x86 = Release_Static|x86
 		Release|Any CPU = Release|Any CPU
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug_Static|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug_Static|Any CPU.Build.0 = Debug|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug_Static|x86.ActiveCfg = Release|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug_Static|x86.Build.0 = Release|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Debug|x86.Build.0 = Debug|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release_Static|Any CPU.ActiveCfg = Release|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release_Static|Any CPU.Build.0 = Release|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release_Static|x86.ActiveCfg = Release|Any CPU
+		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release_Static|x86.Build.0 = Release|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release|x86.ActiveCfg = Release|Any CPU
 		{ABBD6C5B-640A-4EE6-B3EC-FDB66F8F94B9}.Release|x86.Build.0 = Release|Any CPU
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug_Static|Any CPU.ActiveCfg = Debug_Static|Win32
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug_Static|x86.ActiveCfg = Debug_Static|Win32
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug_Static|x86.Build.0 = Debug_Static|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug|Any CPU.Build.0 = Debug|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug|x86.ActiveCfg = Debug|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Debug|x86.Build.0 = Debug|Win32
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release_Static|Any CPU.ActiveCfg = Release_Static|Win32
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release_Static|x86.ActiveCfg = Release_Static|Win32
+		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release_Static|x86.Build.0 = Release_Static|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release|Any CPU.ActiveCfg = Release|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release|Any CPU.Build.0 = Release|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release|x86.ActiveCfg = Release|Win32
 		{2DADFB95-F40D-4BF2-BCEE-5354C543799D}.Release|x86.Build.0 = Release|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug_Static|Any CPU.ActiveCfg = Debug_Static|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug_Static|x86.ActiveCfg = Debug_Static|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug_Static|x86.Build.0 = Debug_Static|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug|Any CPU.Build.0 = Debug|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug|x86.ActiveCfg = Debug|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Debug|x86.Build.0 = Debug|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release_Static|Any CPU.ActiveCfg = Release_Static|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release_Static|x86.ActiveCfg = Release_Static|Win32
+		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release_Static|x86.Build.0 = Release_Static|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release|Any CPU.ActiveCfg = Release|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release|Any CPU.Build.0 = Release|Win32
 		{3E9E0CC8-F735-4109-B241-C8168DF3D624}.Release|x86.ActiveCfg = Release|Win32

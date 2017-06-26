@@ -76,6 +76,7 @@ protected:
 			auto stdnotif = new CStateNotifierLib();
 			stdnotif->setCallbackOnConnect(std::bind(&StateNotifierTester::OnConnected, this));
 			stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
+			stdnotif->setCallbackOnError(std::bind(&StateNotifierTester::OnError, this, std::placeholders::_1));
 
 			if (stdnotif->Init(_procName, _instance, "localhost", 1466))
 			{
@@ -116,6 +117,13 @@ protected:
 	void OnDisconnected()
 	{
 		printf("\nServer disconnected!");
+	}
+
+	void OnError(const std::string& errMsg)
+	{
+#ifdef _DEBUG
+		std::cerr << std::endl << errMsg << std::endl;
+#endif
 	}
 
 };

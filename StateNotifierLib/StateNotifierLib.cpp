@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+
 #include <queue>
 #include <algorithm>
 #include <memory>
@@ -33,7 +34,7 @@ using Poco::Buffer;
 
 using namespace std;
 
-class CStateNotifierLibPimpl : public Runnable
+class CStateNotifierLib::CStateNotifierLibPimpl : public Runnable
 {
 private:
 	int _id;
@@ -46,31 +47,38 @@ private:
 	string _host;
 	int _port;
 	connectionCallback _onConnect, _onDisconnect;
+	errorCallback _onError;
 
 public:
 	string getProcess() { return _processName; }
 	int getInstance() { return _instance; }
-	void setCallbackOnConnect(connectionCallback fnct) { _onConnect = fnct; };
-	void setCallbackOnDisconnect(connectionCallback fnct) { _onDisconnect = fnct; };
+	void setCallbackOnConnect(connectionCallback fnct) { _onConnect = fnct; }
+	void setCallbackOnDisconnect(connectionCallback fnct) { _onDisconnect = fnct; }
+	void setCallbackOnError(errorCallback fnct) { _onError = fnct; }
 
 	CStateNotifierLibPimpl() :_id(0) {}
 	CStateNotifierLibPimpl(int n) :_id(n) {}
 	~CStateNotifierLibPimpl()
 	{
 		stop();
-		_psock.release();
 	};
 
 	bool getConnected()
 	{
-		if (_psock.get() != NULL)
+		if (_psock.get() != nullptr)
 		{
-			bool part1 = _psock.get()->poll(1000, StreamSocket::SELECT_READ);
-			bool part2 = (_psock.get()->available() == 0);
-			if (part1 && part2)
-				return false;
-			else
-				return true;
+			try
+			{
+				bool part1 = _psock->poll(1000, StreamSocket::SELECT_READ);
+				bool part2 = (_psock->available() == 0);
+				if (part1 && part2)
+					return false;
+				else
+					return true;
+			}
+			catch (NetException& e) {
+				notifyError(e.message());
+			}
 		}
 
 		return false;
@@ -87,14 +95,20 @@ public:
 
 	void notifyConnected()
 	{
-		if (_onConnect != NULL)
+		if (_onConnect != nullptr)
 			_onConnect();
 	}
 
 	void notifyDisconnected()
 	{
-		if (_onDisconnect != NULL)
+		if (_onDisconnect != nullptr)
 			_onDisconnect();
+	}
+
+	void notifyError(const std::string& errMsg)
+	{
+		if (_onError != nullptr)
+			_onError(errMsg);
 	}
 
 	/// clear queue
@@ -121,16 +135,16 @@ public:
 
 			try
 			{
-				_psock.release();
 				SocketAddress endpoint(_host, _port);
 				unique_ptr<StreamSocket> socket_ptr(new StreamSocket(endpoint));
 				_psock.swap(socket_ptr);
+				socket_ptr.release();
 				notifyConnected();
 				return true;
 			}
 			catch(NetException& e)
 			{
-				cerr << endl << e.displayText() << endl;
+				notifyError(e.message());
 			}
 		}
 
@@ -141,8 +155,6 @@ public:
 	{
 		_stop = true;
 		clearQueue();
-		// close socket
-		_psock.get()->shutdown();
 		notifyDisconnected();
 	}
 
@@ -160,14 +172,12 @@ public:
 			int tmp = 0;
 			try {
 				while (bytesToWrite > tmp) {
-					tmp += _psock.get()->sendBytes(buf_ptr + tmp, bytesToWrite - tmp);
+					tmp += _psock->sendBytes(buf_ptr + tmp, bytesToWrite - tmp);
 				}
 				return true;
 			}
-			catch (NetException error) {
-#if _DEBUG
-				cout << "\nrecv failed (Error: " << error.displayText() << ')' << endl;
-#endif
+			catch (NetException e) {
+				notifyError(e.message());
 				return false;
 			}
 		}
@@ -194,13 +204,7 @@ public:
 				}
 				catch (NetException& e)
 				{
-					cout << "\nNetException: " << e.what();
-					if (!getConnected())
-						break;
-				}
-				catch (Exception &e)
-				{
-					cout << "\nException: " << e.what();
+					notifyError(e.message());
 					if (!getConnected())
 						break;
 				}
@@ -221,7 +225,7 @@ public:
 // see StateNotifierLib.h for the class definition
 CStateNotifierLib::CStateNotifierLib()
 {
-	_pimpl = unique_ptr<CStateNotifierLibPimpl>(new CStateNotifierLibPimpl());
+	_pimpl = std::unique_ptr<CStateNotifierLibPimpl>(new CStateNotifierLib::CStateNotifierLibPimpl());
 	return;
 }
 
@@ -229,11 +233,11 @@ bool CStateNotifierLib::Init(const string& processName, int instance, const stri
 {
 	auto res = _pimpl->init(processName, instance, host, port);
 	if(res)
-		ThreadPool::defaultPool().start(*_pimpl.get()); // start working thread
+		ThreadPool::defaultPool().start(*_pimpl); // start working thread
 	return res;
 }
 
-void build_state(Object * const result,
+void build_json(Object * const result,
 	const string& process,
 	int instance,
 	const string& sequence,
@@ -268,7 +272,7 @@ void build_state(Object * const result,
 void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), sequence, stateName, "ENTERSTATE", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), sequence, stateName, "ENTERSTATE", params);
 	ostringstream  os;
 	json->stringify(os, 1);
 	string s = os.str();
@@ -281,7 +285,7 @@ void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateN
 void CStateNotifierLib::ExitStatus(const string& sequence, const string& stateName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), sequence, stateName, "EXITSTATE", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), sequence, stateName, "EXITSTATE", params);
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
@@ -295,7 +299,7 @@ void CStateNotifierLib::EventEmit(const string& sequence, const string& eventNam
 {
 	poco_assert(to.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_EMIT", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_EMIT", params);
 	json->set("to", to);
 	json->set("from", _pimpl->getProcess());
 	ostringstream os;
@@ -311,7 +315,7 @@ void CStateNotifierLib::EventRecv(const string& sequence, const string& eventNam
 {
 	poco_assert(from.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_RECV", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_RECV", params);
 	json->set("from", from);
 	json->set("to", _pimpl->getProcess());
 	ostringstream os;
@@ -326,7 +330,7 @@ void CStateNotifierLib::EventRecv(const string& sequence, const string& eventNam
 void CStateNotifierLib::Event(const string& sequence, const string& eventName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
-	build_state(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), NULL, eventName, "EVENT_EMIT", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_EMIT", params);
 	json->set("from", _pimpl->getProcess());
 	json->set("to", _pimpl->getProcess());
 	ostringstream os;
@@ -349,6 +353,11 @@ void CStateNotifierLib::setCallbackOnDisconnect(connectionCallback fnct)
 	_pimpl->setCallbackOnDisconnect(fnct);
 };
 
+void CStateNotifierLib::setCallbackOnError(errorCallback fnct)
+{
+	_pimpl->setCallbackOnError(fnct);
+};
+
 bool CStateNotifierLib::getConnected()
 {
 	return _pimpl->getConnected();
@@ -356,8 +365,8 @@ bool CStateNotifierLib::getConnected()
 
 CStateNotifierLib::~CStateNotifierLib()
 {
-	_pimpl.release();
-
 	// wait threads finish
 	ThreadPool::defaultPool().joinAll();
+
+	_pimpl.release();
 }

@@ -10,6 +10,6 @@
 #include <stdio.h>
 #include <tchar.h>
 
-
+#define POCO_STATIC
 
 // TODO: reference additional headers your program requires here

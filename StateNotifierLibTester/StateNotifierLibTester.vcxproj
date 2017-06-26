@@ -1,8 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_Static|Win32">
+      <Configuration>Debug_Static</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_Static|Win32">
+      <Configuration>Release_Static</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
@@ -21,7 +29,18 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Static|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Static|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -33,14 +52,26 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Static|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Static|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Static|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -54,15 +85,41 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\Debug;$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>StateNotifierLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundationd.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNetd.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSONd.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtild.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXMLd.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
+      <Command>REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundationd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNetd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSONd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtild.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXMLd.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Static|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\StateNotifierLib;$(ProjectDir)..\..\poco-1.7.8p2-all\Util\include;$(ProjectDir)..\..\poco-1.7.8p2-all\Foundation\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(OutDir);$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>StateNotifierLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundationd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNetd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSONd.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtild.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXMLd.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -84,15 +141,45 @@ copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXMLd.*" "$(ProjectDir)..\$(
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\Debug;$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>StateNotifierLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundation.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNet.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSON.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtil.*" "$(ProjectDir)..\$(ConfigurationName)\"
-copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXML.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
+      <Command>REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundation.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNet.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSON.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtil.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXML.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Static|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\StateNotifierLib;$(ProjectDir)..\..\poco-1.7.8p2-all\Util\include;$(ProjectDir)..\..\poco-1.7.8p2-all\Foundation\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(OutDir);$(ProjectDir)..\..\poco-1.7.8p2-all\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>StateNotifierLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoFoundation.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoNet.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoJSON.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoUtil.*" "$(ProjectDir)..\$(ConfigurationName)\"
+REM copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXML.*" "$(ProjectDir)..\$(ConfigurationName)\"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -110,7 +197,9 @@ copy /y "$(ProjectDir)..\..\poco-1.7.8p2-all\bin\PocoXML.*" "$(ProjectDir)..\$(C
     <ClCompile Include="StateNotifierLibTester.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Static|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Static|Win32'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
