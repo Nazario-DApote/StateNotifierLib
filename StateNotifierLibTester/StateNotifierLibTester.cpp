@@ -3,10 +3,6 @@
 
 #include "stdafx.h"
 #include "StateNotifierLib.h"
-#include <conio.h>
-#include <iostream>
-#include <string.h>
-#include <map>
 #include "Poco\Util\Application.h"
 #include "Poco\Util\Option.h"
 #include "Poco\Util\HelpFormatter.h"
@@ -15,6 +11,7 @@
 #include "Poco\FormattingChannel.h"
 #include "Poco\PatternFormatter.h"
 #include "Poco\AutoPtr.h"
+#include "StateMachine.h"
 
 using Poco::Util::Application;
 using Poco::Util::Option;
@@ -85,10 +82,6 @@ protected:
 			{
 				_procName = args[0];
 			}
-			std::map<std::string, std::string> mp;
-			mp.insert(std::pair<std::string, std::string>("param1", "value1"));
-			mp.insert(std::pair<std::string, std::string>("param2", "value2"));
-
 			auto stdnotif = new CStateNotifierLib();
 			//stdnotif->setCallbackOnConnect(std::bind(&StateNotifierTester::OnConnected, this));
 			//stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
@@ -101,6 +94,14 @@ protected:
 
 			if (stdnotif->Init(_procName, _instance, "localhost", 1466))
 			{
+				std::map<std::string, std::string> mp;
+				mp.insert(std::pair<std::string, std::string>("param1", "value1"));
+				mp.insert(std::pair<std::string, std::string>("param2", "value2"));
+
+				SM::Top::Box box;
+				box._stnotif = stdnotif;
+				Macho::Machine<SM::Top> stateMachine;
+
 				while (true)
 				{
 					poco_information(_logger, "Press 'S' to send state");
@@ -110,7 +111,8 @@ protected:
 
 					if (c == 's' || c == 'S')
 					{
-						stdnotif->EnterStatus("Seq1", "begin send", mp);
+						stateMachine->event();
+						stdnotif->EnterStatus("SM", string(stateMachine.currentState().name()), mp);
 					}
 					else if (c == 'q' || c == 'Q')
 					{

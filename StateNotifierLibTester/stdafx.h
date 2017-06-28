@@ -13,3 +13,7 @@
 #define POCO_STATIC
 
 // TODO: reference additional headers your program requires here
+#include <conio.h>
+#include <iostream>
+#include <string.h>
+#include <map>

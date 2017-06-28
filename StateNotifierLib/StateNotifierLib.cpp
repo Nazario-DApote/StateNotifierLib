@@ -169,7 +169,7 @@ public:
 		notifyDisconnected();
 	}
 
-	bool sendMsg(const string msg)
+	bool sendMsg(const string& msg)
 	{
 		if (getConnected())
 		{
