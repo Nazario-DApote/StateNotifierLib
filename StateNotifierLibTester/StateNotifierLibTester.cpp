@@ -111,7 +111,11 @@ protected:
 
 					if (c == 's' || c == 'S')
 					{
+						// notify new event received
+						stdnotif->EventRecv("SM", "KeyPress", _procName, std::map<string, string>());
+						// change state
 						stateMachine->event();
+						// notify new state
 						stdnotif->EnterStatus("SM", string(stateMachine.currentState().name()), mp);
 					}
 					else if (c == 'q' || c == 'Q')

@@ -307,7 +307,7 @@ void CStateNotifierLib::EventEmit(const string& sequence, const string& eventNam
 {
 	poco_assert(to.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
-	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_EMIT", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), std::string(), eventName, "EVENT_EMIT", params);
 	json->set("to", to);
 	json->set("from", _pimpl->getProcess());
 	ostringstream os;
@@ -321,7 +321,7 @@ void CStateNotifierLib::EventRecv(const string& sequence, const string& eventNam
 {
 	poco_assert(from.length() > 0);
 	auto json = auto_ptr<Object>(new Object);
-	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_RECV", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), std::string(), eventName, "EVENT_RECV", params);
 	json->set("from", from);
 	json->set("to", _pimpl->getProcess());
 	ostringstream os;
@@ -334,7 +334,7 @@ void CStateNotifierLib::EventRecv(const string& sequence, const string& eventNam
 void CStateNotifierLib::Event(const string& sequence, const string& eventName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
-	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), nullptr, eventName, "EVENT_EMIT", params);
+	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), std::string(), eventName, "EVENT_EMIT", params);
 	json->set("from", _pimpl->getProcess());
 	json->set("to", _pimpl->getProcess());
 	ostringstream os;
