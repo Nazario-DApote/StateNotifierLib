@@ -25,7 +25,7 @@
 #endif
 
 typedef std::function<void()> connectionCallback;
-typedef std::function<void(const std::string& errMsg)> errorCallback;
+typedef std::function<void(const std::string& errMsg)> logCallback;
 
 // This class is exported from the StateNotifierLib.dll
 class CStateNotifierLib {
@@ -35,7 +35,8 @@ public:
 
 	STATENOTIFIERLIB_API void setCallbackOnConnect(connectionCallback fnct);
 	STATENOTIFIERLIB_API void setCallbackOnDisconnect(connectionCallback fnct);
-	STATENOTIFIERLIB_API void setCallbackOnError(errorCallback fnct);
+	STATENOTIFIERLIB_API void setCallbackOnInfo(logCallback fnct);
+	STATENOTIFIERLIB_API void setCallbackOnError(logCallback fnct);
 	STATENOTIFIERLIB_API bool getConnected();
 
 	STATENOTIFIERLIB_API bool Init(const std::string& processName, int instance, const std::string& host, int port);
@@ -48,5 +49,4 @@ public:
 private:
 	class CStateNotifierLibPimpl;
 	std::unique_ptr<CStateNotifierLibPimpl> _pimpl;
-	//CStateNotifierLibPimpl* _pimpl;
 };

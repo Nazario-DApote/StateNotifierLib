@@ -4,20 +4,28 @@
 #include "stdafx.h"
 #include "StateNotifierLib.h"
 #include <conio.h>
-#include <string.h>
 #include <iostream>
-#include <algorithm>
+#include <string.h>
 #include <map>
-#include <Windows.h>
 #include "Poco\Util\Application.h"
 #include "Poco\Util\Option.h"
 #include "Poco\Util\HelpFormatter.h"
+#include "Poco\Logger.h"
+#include "Poco\WindowsConsoleChannel.h"
+#include "Poco\FormattingChannel.h"
+#include "Poco\PatternFormatter.h"
+#include "Poco\AutoPtr.h"
 
 using Poco::Util::Application;
 using Poco::Util::Option;
 using Poco::Util::OptionSet;
 using Poco::Util::OptionCallback;
 using Poco::Util::HelpFormatter;
+using Poco::AutoPtr;
+using Poco::Logger;
+using Poco::FormattingChannel;
+using Poco::PatternFormatter;
+using Poco::WindowsColorConsoleChannel;
 
 class StateNotifierTester : public Application
 {
@@ -25,13 +33,21 @@ public:
 	StateNotifierTester():
 		_helpRequested(false),
 		_procName("thisProc"),
-		_instance(0) {
+		_instance(0),
+		_logger (Logger::get("TestLogger")) {
+
+		AutoPtr<WindowsColorConsoleChannel> consoleChannel(new WindowsColorConsoleChannel);
+		AutoPtr<PatternFormatter> pf(new PatternFormatter);
+		pf->setProperty("pattern", "[%Y-%m-%d %H:%M:%S] %t");
+		AutoPtr<FormattingChannel> pfChannel(new FormattingChannel(pf, consoleChannel));
+		_logger.setChannel(pfChannel);
 	}
 
 private:
 	std::string _procName;
 	int _instance;
 	bool _helpRequested;
+	Logger& _logger;
 
 protected:
 
@@ -74,34 +90,37 @@ protected:
 			mp.insert(std::pair<std::string, std::string>("param2", "value2"));
 
 			auto stdnotif = new CStateNotifierLib();
-			stdnotif->setCallbackOnConnect(std::bind(&StateNotifierTester::OnConnected, this));
-			stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
-			stdnotif->setCallbackOnError(std::bind(&StateNotifierTester::OnError, this, std::placeholders::_1));
+			//stdnotif->setCallbackOnConnect(std::bind(&StateNotifierTester::OnConnected, this));
+			//stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
+			//stdnotif->setCallbackOnError(std::bind(&StateNotifierTester::OnError, this, std::placeholders::_1));
+			//stdnotif->setCallbackOnInfo(std::bind(&StateNotifierTester::OnInfo, this, std::placeholders::_1));
+			stdnotif->setCallbackOnConnect([&]() { poco_information(_logger, "Connected to the server via TCP\\IP: localhost:1466"); });
+			stdnotif->setCallbackOnDisconnect([&]() { poco_information(_logger, "Server disconnected!"); });
+			stdnotif->setCallbackOnError([&](std::string errMsg) { poco_critical(_logger, errMsg); });
+			stdnotif->setCallbackOnInfo([&](std::string infoMsg) { poco_information(_logger, infoMsg); });
 
 			if (stdnotif->Init(_procName, _instance, "localhost", 1466))
 			{
 				while (true)
 				{
-					printf("\n Press 'S' to send state");
-					printf("\n Press 'Q' to exit");
+					poco_information(_logger, "Press 'S' to send state");
+					poco_information(_logger, "Press 'Q' to exit");
 
 					int c = _getch();
 
-					if (c == 's')
+					if (c == 's' || c == 'S')
 					{
 						stdnotif->EnterStatus("Seq1", "begin send", mp);
-						printf("\n");
 					}
-					else if (c == 'q')
+					else if (c == 'q' || c == 'Q')
 					{
 						exit(0);
 					}
 				}
-
 			}
 			else
 			{
-				printf("\nCannot connect to the server\n");
+				_logger.error("Cannot connect to the server");
 				system("pause");
 			}
 		}
@@ -109,22 +128,25 @@ protected:
 		return EXIT_OK;
 	}
 
-	void OnConnected()
-	{
-		printf("\nConnected to the server via TCP\\IP: localhost:1466");
-	}
+	//void OnConnected()
+	//{
+	//	poco_information(_logger, "Connected to the server via TCP\\IP: localhost:1466");
+	//}
 
-	void OnDisconnected()
-	{
-		printf("\nServer disconnected!");
-	}
+	//void OnDisconnected()
+	//{
+	//	poco_information(_logger, "Server disconnected!");
+	//}
 
-	void OnError(const std::string& errMsg)
-	{
-#ifdef _DEBUG
-		std::cerr << std::endl << errMsg << std::endl;
-#endif
-	}
+	//void OnError(const std::string& errMsg)
+	//{
+	//	poco_critical(_logger, errMsg);
+	//}
+
+	//void OnInfo(const std::string& infoMsg)
+	//{
+	//	poco_information(_logger, infoMsg);
+	//}
 
 };
 

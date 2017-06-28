@@ -37,7 +37,6 @@ using namespace std;
 class CStateNotifierLib::CStateNotifierLibPimpl : public Runnable
 {
 private:
-	int _id;
 	unique_ptr<StreamSocket> _psock;
 	Mutex _mutexQueue;
 	queue<string> _workQueue;
@@ -47,17 +46,17 @@ private:
 	string _host;
 	int _port;
 	connectionCallback _onConnect, _onDisconnect;
-	errorCallback _onError;
+	logCallback _onError, _onInfo;
 
 public:
 	string getProcess() { return _processName; }
 	int getInstance() { return _instance; }
 	void setCallbackOnConnect(connectionCallback fnct) { _onConnect = fnct; }
 	void setCallbackOnDisconnect(connectionCallback fnct) { _onDisconnect = fnct; }
-	void setCallbackOnError(errorCallback fnct) { _onError = fnct; }
+	void setCallbackOnError(logCallback fnct) { _onError = fnct; }
+	void setCallbackOnInfo(logCallback fnct) { _onInfo = fnct; }
 
-	CStateNotifierLibPimpl() :_id(0) {}
-	CStateNotifierLibPimpl(int n) :_id(n) {}
+	CStateNotifierLibPimpl() {}
 	~CStateNotifierLibPimpl()
 	{
 		stop();
@@ -111,12 +110,36 @@ public:
 			_onError(errMsg);
 	}
 
-	/// clear queue
+	void notifyInfo(const std::string& errMsg)
+	{
+		if (_onInfo != nullptr)
+			_onInfo(errMsg);
+	}
+
 	void clearQueue()
 	{
 		ScopedLock<Mutex> lock(_mutexQueue);
 		queue<string> empty;
 		swap(_workQueue, empty);
+	}
+
+	bool connect()
+	{
+		try
+		{
+			SocketAddress endpoint(_host, _port);
+			unique_ptr<StreamSocket> socket_ptr(new StreamSocket(endpoint));
+			_psock.swap(socket_ptr);
+			socket_ptr.release();
+			notifyConnected();
+			return true;
+		}
+		catch (NetException& e)
+		{
+			notifyError(e.displayText());
+		}
+
+		return true;
 	}
 
 	bool init(const string& processName, int instance, const string& host, int port)
@@ -126,26 +149,14 @@ public:
 		poco_assert(host.length() > 0);
 		poco_assert(65536 > port && port >= 1024);
 
+		_processName = processName;
+		_instance = instance;
+		_host = host;
+		_port = port;
+
 		if(!getConnected())
 		{
-			_processName = processName;
-			_instance = instance;
-			_host = host;
-			_port = port;
-
-			try
-			{
-				SocketAddress endpoint(_host, _port);
-				unique_ptr<StreamSocket> socket_ptr(new StreamSocket(endpoint));
-				_psock.swap(socket_ptr);
-				socket_ptr.release();
-				notifyConnected();
-				return true;
-			}
-			catch(NetException& e)
-			{
-				notifyError(e.message());
-			}
+			return connect();
 		}
 
 		return false;
@@ -200,7 +211,9 @@ public:
 				{
 					auto msg = _workQueue.front(); // pick
 					sendMsg(msg);
-					_workQueue.pop();
+
+					finally([&]() { _workQueue.pop(); });
+					//_workQueue.pop(); // dequeue
 				}
 				catch (NetException& e)
 				{
@@ -216,7 +229,7 @@ public:
 				break;
 			}
 
-			Thread::sleep(100);
+			Thread::sleep(200);
 		}
 	}
 };
@@ -226,15 +239,6 @@ public:
 CStateNotifierLib::CStateNotifierLib()
 {
 	_pimpl = std::unique_ptr<CStateNotifierLibPimpl>(new CStateNotifierLib::CStateNotifierLibPimpl());
-	return;
-}
-
-bool CStateNotifierLib::Init(const string& processName, int instance, const string& host, int port)
-{
-	auto res = _pimpl->init(processName, instance, host, port);
-	if(res)
-		ThreadPool::defaultPool().start(*_pimpl); // start working thread
-	return res;
 }
 
 void build_json(Object * const result,
@@ -269,6 +273,14 @@ void build_json(Object * const result,
 	result->set("parameters", inner);
 }
 
+bool CStateNotifierLib::Init(const string& processName, int instance, const string& host, int port)
+{
+	auto res = _pimpl->init(processName, instance, host, port);
+	if (res)
+		ThreadPool::defaultPool().start(*_pimpl); // start working thread
+	return res;
+}
+
 void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateName, const map<string, string>& params)
 {
 	auto json = auto_ptr<Object>(new Object);
@@ -276,9 +288,7 @@ void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateN
 	ostringstream  os;
 	json->stringify(os, 1);
 	string s = os.str();
-#ifdef _DEBUG
-	cout << endl << s << endl;
-#endif
+	_pimpl->notifyInfo(s);
 	_pimpl->addQueue(s);
 }
 
@@ -289,9 +299,7 @@ void CStateNotifierLib::ExitStatus(const string& sequence, const string& stateNa
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
-#ifdef _DEBUG
-	cout << endl << s << endl;
-#endif
+	_pimpl->notifyInfo(s);
 	_pimpl->addQueue(s);
 }
 
@@ -305,9 +313,7 @@ void CStateNotifierLib::EventEmit(const string& sequence, const string& eventNam
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
-#ifdef _DEBUG
-	cout << endl << s << endl;
-#endif
+	_pimpl->notifyInfo(s);
 	_pimpl->addQueue(s);
 }
 
@@ -321,9 +327,7 @@ void CStateNotifierLib::EventRecv(const string& sequence, const string& eventNam
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
-#ifdef _DEBUG
-	cout << endl << s << endl;
-#endif
+	_pimpl->notifyInfo(s);
 	_pimpl->addQueue(s);
 }
 
@@ -336,12 +340,9 @@ void CStateNotifierLib::Event(const string& sequence, const string& eventName, c
 	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
-#ifdef _DEBUG
-	cout << endl << s << endl;
-#endif
+	_pimpl->notifyInfo(s);
 	_pimpl->addQueue(s);
 }
-
 
 void CStateNotifierLib::setCallbackOnConnect(connectionCallback fnct)
 {
@@ -353,9 +354,14 @@ void CStateNotifierLib::setCallbackOnDisconnect(connectionCallback fnct)
 	_pimpl->setCallbackOnDisconnect(fnct);
 };
 
-void CStateNotifierLib::setCallbackOnError(errorCallback fnct)
+void CStateNotifierLib::setCallbackOnError(logCallback fnct)
 {
 	_pimpl->setCallbackOnError(fnct);
+};
+
+void CStateNotifierLib::setCallbackOnInfo(logCallback fnct)
+{
+	_pimpl->setCallbackOnInfo(fnct);
 };
 
 bool CStateNotifierLib::getConnected()
@@ -365,8 +371,8 @@ bool CStateNotifierLib::getConnected()
 
 CStateNotifierLib::~CStateNotifierLib()
 {
+	_pimpl.release();
+
 	// wait threads finish
 	ThreadPool::defaultPool().joinAll();
-
-	_pimpl.release();
 }
