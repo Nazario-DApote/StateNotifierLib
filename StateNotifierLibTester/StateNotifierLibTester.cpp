@@ -11,6 +11,8 @@
 #include "Poco\FormattingChannel.h"
 #include "Poco\PatternFormatter.h"
 #include "Poco\AutoPtr.h"
+#include "Poco\String.h"
+#include "Poco\NumberParser.h"
 #include "StateMachine.h"
 
 using Poco::Util::Application;
@@ -23,6 +25,7 @@ using Poco::Logger;
 using Poco::FormattingChannel;
 using Poco::PatternFormatter;
 using Poco::WindowsColorConsoleChannel;
+using Poco::NumberParser;
 
 class StateNotifierTester : public Application
 {
@@ -31,7 +34,11 @@ public:
 		_helpRequested(false),
 		_procName("thisProc"),
 		_instance(0),
-		_logger (Logger::get("TestLogger")) {
+		_logger (Logger::get("TestLogger")),
+		_srvPort(1466),
+		_srvHost("localhost") {
+
+		this->setUnixOptions(true);
 
 		AutoPtr<WindowsColorConsoleChannel> consoleChannel(new WindowsColorConsoleChannel);
 		AutoPtr<PatternFormatter> pf(new PatternFormatter);
@@ -45,6 +52,8 @@ private:
 	int _instance;
 	bool _helpRequested;
 	Logger& _logger;
+	int _srvPort;
+	std::string _srvHost;
 
 protected:
 
@@ -58,16 +67,45 @@ protected:
 			.required(false)
 			.repeatable(false)
 			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handleHelp)));
+
+		options.addOption(
+			Option("host", "H", "set server address")
+			.required(false)
+			.repeatable(false)
+			.argument("<hostname/ip>", true)
+			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handleHost)));
+
+		options.addOption(
+			Option("port", "p", "set server port")
+			.required(false)
+			.repeatable(false)
+			.argument("<portNbr>", true)
+			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handlePort)));
+	}
+
+	void handlePort(const std::string& name, const std::string& value)
+	{
+		int tmpValue;
+		if (NumberParser::tryParse(value, tmpValue))
+		{
+			poco_assert(tmpValue > 0);
+			StateNotifierTester::_srvPort = tmpValue;
+		}
+	}
+
+	void handleHost(const std::string& name, const std::string& value)
+	{
+		_srvHost = value;
 	}
 
 	void handleHelp(const std::string& name, const std::string& value)
 	{
 		HelpFormatter helpFormatter(options());
+		helpFormatter.setUnixStyle(true);
 		helpFormatter.setCommand(commandName());
-		helpFormatter.setUsage("StateNotifierTester <OPTIONS> <Process>Name");
-		helpFormatter.setUsage("OPTIONS");
-		helpFormatter.setAutoIndent();
 		helpFormatter.setHeader("A tester for StateNotifierLib library");
+		helpFormatter.setAutoIndent();
+		helpFormatter.setUsage("<OPTIONS> <ProcessName>");
 		helpFormatter.setFooter("Nazario D'Apote");
 		helpFormatter.format(std::cout);
 		stopOptionsProcessing();
@@ -87,12 +125,12 @@ protected:
 			//stdnotif->setCallbackOnDisconnect(std::bind(&StateNotifierTester::OnDisconnected, this));
 			//stdnotif->setCallbackOnError(std::bind(&StateNotifierTester::OnError, this, std::placeholders::_1));
 			//stdnotif->setCallbackOnInfo(std::bind(&StateNotifierTester::OnInfo, this, std::placeholders::_1));
-			stdnotif->setCallbackOnConnect([&]() { poco_information(_logger, "Connected to the server via TCP\\IP: localhost:1466"); });
+			stdnotif->setCallbackOnConnect([&]() { poco_information(_logger, Poco::format("Connected to the server via TCP\\IP: %s:%d", _srvHost, _srvPort)); });
 			stdnotif->setCallbackOnDisconnect([&]() { poco_information(_logger, "Server disconnected!"); });
 			stdnotif->setCallbackOnError([&](std::string errMsg) { poco_critical(_logger, errMsg); });
 			stdnotif->setCallbackOnInfo([&](std::string infoMsg) { poco_information(_logger, infoMsg); });
 
-			if (stdnotif->Init(_procName, _instance, "localhost", 1466))
+			if (stdnotif->Init(_procName, _instance, _srvHost, _srvPort))
 			{
 				std::map<std::string, std::string> mp;
 				mp.insert(std::pair<std::string, std::string>("param1", "value1"));

@@ -124,9 +124,21 @@
 						var newEvent = new Event();
 						newEvent.uuid = uuid.v4();
 						newEvent.name = data.name;
+						$scope.canvas.Devices.forEach(function (d) {
+							if (d.name === data.from)
+								newEvent.from = d.States[d.States.length-1].uuid;
+
+							if (d.name === data.to)
+							{
+								d.States.forEach(function (s) {
+									if (s.name)
+										newEvent.to = s.uuid;
+								});
+							}
+						});
 						newEvent.startTime = data.startTime;
 						newEvent.parameters = data.parameters;
-						dev.Events.push(newEvent);
+						$scope.canvas.Events.push(newEvent);
 					}
 					if ($scope.movieReady)
 					{

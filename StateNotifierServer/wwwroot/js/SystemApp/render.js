@@ -20,7 +20,6 @@ var Device = function () {
 	this.name = "";
 	this.instance = 0;
 	this.States = []; // array of State objects
-	this.Events = []; // array of Event objects
 };
 
 // System class definition
@@ -28,9 +27,10 @@ var Canvas = function (windowWidth) {
 	this.windowWidth = windowWidth;
 	this.colSize = 80;
 	this.rowSize = 80;
-	this.spaceBetweenRows = 15;
+	this.spaceBetweenRows = 35;
 	this.spaceBetweenCols = 25;
 	this.Devices = [];   // array of Device objects
+	this.Events = [];   // array of Events objects
 };
 
 Canvas.prototype.MaxSteps = function () { return Math.floor(this.windowWidth / (this.colSize + this.spaceBetweenCols) - 1); }
@@ -63,12 +63,12 @@ function initializeMove() {
 				var colSize = canvas.colSize;
 				var rowSize = canvas.rowSize;
 				var devPosX = 0;
-				var devPosY = 5;
+				var devPosY = 20;
 				var steps = canvas.Devices.length;
 				var devStateHue = color('hsl(83, 100%, 50%, 1)'); // useful calculator: http://hslpicker.com/#9dff00
 				var devTextColor = color('red').darker();
 				var devFontSize = 15
-				var circleRadius = rowSize / 2 + devPosY;
+				var circleRadius = rowSize / 2;
 
 				canvas.Devices.forEach(function (dev) {
 
@@ -84,8 +84,7 @@ function initializeMove() {
 							textFillColor: devTextColor,
 							x: devPosX,
 							y: devPosY + colSize / 2 - devFontSize
-						});
-						renderedObjects[devKey].addTo(stage);
+						}).addTo(stage);
 					}
 
 					var statePosX = devPosX + colSize; // start circle position
@@ -101,9 +100,8 @@ function initializeMove() {
 						if (!renderedObjects.hasOwnProperty(state.uuid)) {
 							renderedObjects[state.uuid] = new Circle(statePosX + colSize / 2, statePosY + rowSize / 2, circleRadius)
 								.attr('fillColor', devStateHue)
-								.stroke(devStateHue.midpoint('black'), 0.5);
-
-							renderedObjects[state.uuid].addTo(stage);
+								.stroke(devStateHue.midpoint('black'), 0.5)
+								.addTo(stage);
 						}
 
 						// Draw the state name
@@ -116,8 +114,7 @@ function initializeMove() {
 								textStrokeColor: 'black',
 								x: statePosX,
 								y: stateTextsPosY
-							});
-							renderedObjects[stateTextKey].addTo(stage);
+							}).addTo(stage);
 						}
 
 						// Draw the sequence name
@@ -130,8 +127,7 @@ function initializeMove() {
 								textStrokeColor: 'black',
 								x: statePosX,
 								y: stateTextsPosY
-							});
-							renderedObjects[stateSeqTextKey].addTo(stage);
+							}).addTo(stage);
 						}
 
 						// Draw the statrttime
@@ -144,8 +140,7 @@ function initializeMove() {
 								textStrokeColor: 'black',
 								x: statePosX,
 								y: stateTextsPosY
-							});
-							renderedObjects[stateSeqTextKey].addTo(stage);
+							}).addTo(stage);
 						}
 
 						// Draw the state parameters
@@ -161,8 +156,7 @@ function initializeMove() {
 									textStrokeColor: 'black',
 									x: statePosX,
 									y: paramStatePosY
-								});
-								renderedObjects[stateParamTextKey].addTo(stage);
+								}).addTo(stage);
 							}
 						} // forEach parameters
 
@@ -174,6 +168,56 @@ function initializeMove() {
 					devStateHue.hue(devStateHue.hue() + 1 / steps);
 
 				}); // forEach device
+
+				Math.radians = function (degrees) {
+					return degrees * Math.PI / 180;
+				};
+
+				Math.deg = function (degrees) {
+					return degrees * Math.PI / 180;
+				};
+
+				canvas.Events.forEach(function (ev) {
+					var c1 = renderedObjects[ev.from];  // get circle
+					var c2 = renderedObjects[ev.to];	// get circle
+
+					if (c1 && c2)
+					{
+						var x1 = c1.attr('x');
+						var y1 = c1.attr('y');
+						var x2 = c2.attr('x');
+						var y2 = c2.attr('y');
+
+						if (c1 === c2)
+						{
+							var R = colSize;
+							var d = (colSize + spaceBetweenCols / 2) / 2;
+							var pwd = Math.pow(d, 2);
+							var g = Math.acos((2 * pwd - Math.pow(R, 2)) / (2 * pwd));
+							var sticaz = Math.radians(6); // radiant corrections
+							renderedObjects[ev.uuid] = new Arc(x1 + d, y1, d, 2 * Math.PI - g - sticaz, Math.PI + g + sticaz)
+								.stroke('red', 1)
+								.addTo(stage);
+
+							renderedObjects[ev.uuid + "_text"] = new Text(ev.name).attr({
+								fontFamily: 'Arial, sans-serif',
+								fontSize: '8',
+								textFillColor: 'red',
+								textStrokeColor: 'red',
+								x: x1 + d - 15,
+								y: y1 - d - 15
+							}).addTo(stage);
+						}
+						else
+						{
+							renderedObjects[ev.uuid] = new Path()
+								.moveTo(x1, y1)
+								.lineTo(x2, y2)
+								.stroke('red', 1)
+								.addTo(stage);
+						}
+					}
+				});
 
 			}); // end rendering
 
