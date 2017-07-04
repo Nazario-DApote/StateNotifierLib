@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace StateNotifierServer.Services
 {
 	public class JsonDump
-    {
+	{
 		private readonly JsonDumpOptions _config;
 
 		private readonly ILogger _logger;
@@ -29,7 +29,7 @@ namespace StateNotifierServer.Services
 				await Task.Yield(); // Make us async right away
 
 				var fname = string.Concat(
-					DateTime.Now.ToLocalTime().ToString("yyyy-MM-dd_HHmmss."),
+					DateTime.Now.ToLocalTime().ToString("yyyy-MM-dd_HHmmss.fff."),
 					msg.ProcessName + msg.Instance.ToString(), ".",
 					msg.Command.ToString(),
 					".json");

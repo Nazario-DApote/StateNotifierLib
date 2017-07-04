@@ -68,7 +68,7 @@ function initializeMove() {
 				var devStateHue = color('hsl(83, 100%, 50%, 1)'); // useful calculator: http://hslpicker.com/#9dff00
 				var devTextColor = color('red').darker();
 				var devFontSize = 15
-				var circleRadius = rowSize / 2;
+				var R = colSize / 2;
 
 				canvas.Devices.forEach(function (dev) {
 
@@ -89,20 +89,41 @@ function initializeMove() {
 
 					var statePosX = devPosX + colSize; // start circle position
 					var statePosY = devPosY;
+					var lastStateRendered = null;
 					dev.States.forEach(function (state) {
 
 						if (!state || !state.name) {
-							statePosX += colSize + spaceBetweenCols; // increment state position
+							statePosX += 2 * R + spaceBetweenCols; // increment state position
 							return;
+						}
+
+						if (lastStateRendered && !renderedObjects[state.uuid + "_gap"]) {
+							var c1 = renderedObjects[lastStateRendered.uuid];  // get circle
+							var x1 = c1.attr('x');
+							var y1 = c1.attr('y');
+							var d = R + spaceBetweenCols / 2;
+							var pwd = Math.pow(d, 2);
+							var g = Math.acos((2 * pwd - Math.pow(R, 2)) / (2 * pwd));
+							var arcEndX = x1 + d + d * Math.cos(g), y1;
+							console.log(arcEndX);
+							var arcEndY = y1 - d * Math.sin(g);
+							console.log(arcEndY);
+
+							p = ['M', arcEndX, arcEndY, 'Q', arcEndX + 50, arcEndY + 50, statePosX + colSize / 2, statePosY + rowSize / 2].join(' ');
+
+							renderedObjects[state.uuid + "_gap"] = new Path(p)
+								.stroke('red', 1)
+								.addTo(stage);
 						}
 
 						// Draw the circle
 						if (!renderedObjects.hasOwnProperty(state.uuid)) {
-							renderedObjects[state.uuid] = new Circle(statePosX + colSize / 2, statePosY + rowSize / 2, circleRadius)
+							renderedObjects[state.uuid] = new Circle(statePosX + colSize / 2, statePosY + rowSize / 2, R)
 								.attr('fillColor', devStateHue)
 								.stroke(devStateHue.midpoint('black'), 0.5)
 								.addTo(stage);
 						}
+						lastStateRendered = state;
 
 						// Draw the state name
 						var stateTextsPosY = statePosY;
@@ -160,7 +181,7 @@ function initializeMove() {
 							}
 						} // forEach parameters
 
-						statePosX += colSize + spaceBetweenCols; // increment state position
+						statePosX += 2 * R + spaceBetweenCols; // increment state position
 					}); // forEach state
 
 					// increment device position
@@ -188,48 +209,83 @@ function initializeMove() {
 						var x2 = c2.attr('x');
 						var y2 = c2.attr('y');
 
-						if (c1 === c2)
+						if (c1 === c2) // save device
 						{
-							var R = colSize;
-							var d = (colSize + spaceBetweenCols / 2) / 2;
+							var d = R + spaceBetweenCols / 2;
 							var pwd = Math.pow(d, 2);
 							var g = Math.acos((2 * pwd - Math.pow(R, 2)) / (2 * pwd));
-							var sticaz = Math.radians(6); // radiant corrections
-							renderedObjects[ev.uuid] = new Arc(x1 + d, y1, d, 2 * Math.PI - g - sticaz, Math.PI + g + sticaz)
-								.stroke('red', 1)
-								.addTo(stage);
+							if (!renderedObjects[ev.uuid])
+							{
+								renderedObjects[ev.uuid] = new Arc(x1 + d, y1, d, Math.PI + g, 2 * Math.PI - g)
+									.stroke('red', 1)
+									.addTo(stage);
+							}
 
-							renderedObjects[ev.uuid + "_text"] = new Text(ev.name).attr({
-								fontFamily: 'Arial, sans-serif',
-								fontSize: '8',
-								textFillColor: 'red',
-								textStrokeColor: 'red',
-								x: x1 + d - 15,
-								y: y1 - d - 15
-							}).addTo(stage);
+							if (!renderedObjects[ev.uuid + "_text"])
+							{
+								renderedObjects[ev.uuid + "_text"] = new Text(ev.name).attr({
+									fontFamily: 'Arial, sans-serif',
+									fontSize: '8',
+									textFillColor: 'red',
+									textStrokeColor: 'red',
+									x: x1 + d - 15,
+									y: y1 - d - 15
+								}).addTo(stage);
+							}
+
+							// Add Triangle
+							if (!renderedObjects[ev.uuid + "_arrow"])
+							{
+								renderedObjects[ev.uuid + "_arrow"] = new Polygon(x1 + d + d * Math.cos(g), y1 - d * Math.sin(g), 5, 3)
+									.attr({
+										fillColor: 'red',
+										rotation: Math.PI / 180 * 30
+									}).addTo(stage);
+							}
 						}
-						else
+						else // different devices
 						{
 							// Draw Bezier Curve
-							var R = circleRadius;
 							var offbez = 20;
 							var p = null;
-							if (y1 < y2)
-								p = ['M', x1, y1 + R, 'C', x1, y1 + R + offbez, x2, y2 - R - offbez, x2, y2 - R].join(' ');
-							else
-								p = ['M', x1, y1 - R, 'C', x1, y1 - R - offbez, x2, y2 + R + offbez, x2, y2 + R].join(' ');
-							renderedObjects[ev.uuid] = new Path(p)
-								.stroke('red', 1)
-								.addTo(stage);
+							if (y1 < y2) {
 
-							//renderedObjects[ev.uuid] = new Path()
-							//	.moveTo(x1, y1)
-							//	.lineTo(x2, y2)
-							//	.stroke('red', 1)
-							//	.addTo(stage);
+								// Add Triangle
+								if (!renderedObjects[ev.uuid + "_arrow"])
+								{
+									renderedObjects[ev.uuid + "_arrow"] = new Polygon(x2, y2 - R, 5, 3)
+										.attr({
+											fillColor: 'red',
+											rotation: Math.PI / 180 * 180
+										}).addTo(stage);
+								}
+
+								p = ['M', x1, y1 + R, 'C', x1, y1 + R + offbez, x2, y2 - R - offbez, x2, y2 - R].join(' ');
+							}
+							else {
+								// Add Triangle
+								if (!renderedObjects[ev.uuid + "_arrow"])
+								{
+									renderedObjects[ev.uuid + "_arrow"] = new Polygon(x2, y2 + R, 5, 3)
+										.attr({
+											fillColor: 'red',
+											rotation: Math.PI / 180
+										}).addTo(stage);
+								}
+
+								p = ['M', x1, y1 - R, 'C', x1, y1 - R - offbez, x2, y2 + R + offbez, x2, y2 + R].join(' ');
+							}
+
+							if (!renderedObjects[ev.uuid])
+							{
+								renderedObjects[ev.uuid] = new Path(p)
+									.stroke('red', 1)
+									.addTo(stage);
+							}
 						}
 					}
-				});
+
+				}); // canvas.Events.forEach
 
 			}); // end rendering
 

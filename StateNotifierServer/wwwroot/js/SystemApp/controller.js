@@ -114,8 +114,9 @@
 						newState.startTime = data.startTime;
 						newState.parameters = data.parameters;
 						for (var i = 0; i < currentTimeLine; i++) {
-							if (!dev.States[i])
+							if (!dev.States[i]) {
 								dev.States[i] = {};
+							}
 						}
 						dev.States[currentTimeLine] = newState;
 					}
@@ -131,8 +132,9 @@
 							if (d.name === data.to)
 							{
 								d.States.forEach(function (s) {
-									if (s.name)
+									if (s.name) {
 										newEvent.to = s.uuid;
+									}
 								});
 							}
 						});
