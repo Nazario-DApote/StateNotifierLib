@@ -105,7 +105,7 @@
 						currentTimeLine = 0;
 					}
 
-					if (data.type <= 2) // is a STATE change message
+					if (data.type <= 1) // is a STATE change message
 					{
 						var newState = new State();
 						newState.name = data.name;

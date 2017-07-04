@@ -54,6 +54,7 @@ private:
 	Logger& _logger;
 	int _srvPort;
 	std::string _srvHost;
+	std::string _to;
 
 protected:
 
@@ -81,6 +82,18 @@ protected:
 			.repeatable(false)
 			.argument("<portNbr>", true)
 			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handlePort)));
+
+		options.addOption(
+			Option("to", "to", "event destination process")
+			.required(false)
+			.repeatable(false)
+			.argument("<to>", true)
+			.callback(OptionCallback<StateNotifierTester>(this, &StateNotifierTester::handleTo)));
+	}
+
+	void handleTo(const std::string& name, const std::string& value)
+	{
+		_to = value;
 	}
 
 	void handlePort(const std::string& name, const std::string& value)
@@ -155,6 +168,8 @@ protected:
 						stateMachine->event();
 						// notify new state
 						stdnotif->EnterStatus("SM", string(stateMachine.currentState().name()), mp);
+						if(!_to.empty())
+							stdnotif->EventEmit("SM", "test", _to, std::map<string, string>());
 					}
 					else if (c == 'q' || c == 'Q')
 					{

@@ -173,8 +173,8 @@ function initializeMove() {
 					return degrees * Math.PI / 180;
 				};
 
-				Math.deg = function (degrees) {
-					return degrees * Math.PI / 180;
+				Math.deg = function (radiants) {
+					return radiants * 180 / Math.PI;
 				};
 
 				canvas.Events.forEach(function (ev) {
@@ -210,11 +210,23 @@ function initializeMove() {
 						}
 						else
 						{
-							renderedObjects[ev.uuid] = new Path()
-								.moveTo(x1, y1)
-								.lineTo(x2, y2)
+							// Draw Bezier Curve
+							var R = circleRadius;
+							var offbez = 20;
+							var p = null;
+							if (y1 < y2)
+								p = ['M', x1, y1 + R, 'C', x1, y1 + R + offbez, x2, y2 - R - offbez, x2, y2 - R].join(' ');
+							else
+								p = ['M', x1, y1 - R, 'C', x1, y1 - R - offbez, x2, y2 + R + offbez, x2, y2 + R].join(' ');
+							renderedObjects[ev.uuid] = new Path(p)
 								.stroke('red', 1)
 								.addTo(stage);
+
+							//renderedObjects[ev.uuid] = new Path()
+							//	.moveTo(x1, y1)
+							//	.lineTo(x2, y2)
+							//	.stroke('red', 1)
+							//	.addTo(stage);
 						}
 					}
 				});

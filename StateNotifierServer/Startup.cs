@@ -37,7 +37,12 @@ namespace StateNotifierServer
 
 			services.Configure<TcpListenerServiceConfig>(Configuration.GetSection("TcpSocket"));
 
+			services.Configure<JsonDumpOptions>(Configuration.GetSection("Dump"));
+
 			services.AddSingleton<IWsNotifier, StateNotifierService>();
+
+			services.AddSingleton<JsonDump>();
+
 			services.AddSingleton<TcpListenerService>();
 		}
 

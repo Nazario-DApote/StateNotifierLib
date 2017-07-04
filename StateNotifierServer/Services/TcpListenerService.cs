@@ -33,16 +33,20 @@ namespace StateNotifierServer.Services
 
 		private List<Task> _connections;
 
+		private JsonDump _dump;
+
 		private readonly object _lock = new Object(); // sync lock
 
 		public TcpListenerService(
 			IOptions<TcpListenerServiceConfig> options,
 			ILogger<TcpListenerService> logger,
-			IWsNotifier notifier)
+			IWsNotifier notifier,
+			JsonDump dump)
 		{
 			_config = options.Value;
 			_logger = logger;
 			_notifier = notifier;
+			_dump = dump;
 			_cancellationTokenSource = new CancellationTokenSource();
 			_connections = new List<Task>(); // pending connections
 			_listener = new TcpListener(IPAddress.Any, _config.Port);
@@ -151,7 +155,10 @@ namespace StateNotifierServer.Services
 				var serializer = new JsonSerializer();
 				var msgObj = JsonConvert.DeserializeObject<Message>(msg);
 				if (msgObj != null)
+				{
 					await _notifier.SendBroadCast(msgObj);
+					await _dump.Write(msgObj);
+				}
 			}
 		}
 	}
