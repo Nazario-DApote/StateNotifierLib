@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -23,20 +22,19 @@ namespace StateNotifierServer.Services
 
 		private CancellationToken _ct;
 
-		private IWsNotifier _notifier;
+		private StateNotifierService _notifier;
 
 		public CancellationToken CancelToken { get { return _ct; } }
 
 		public WebSocketMiddleware(RequestDelegate next,
 			IOptions<WebSocketMiddlewareConfig> options,
 			ILogger<WebSocketMiddleware> logger,
-			IWsNotifier notifier)
+			StateNotifierService notifier)
 		{
 			_next = next;
 			_config = options.Value;
 			_logger = logger;
 			_notifier = notifier;
-			_notifier.Clients = new Dictionary<Guid, WebSocket>();
 			_notifier.WebSocketService = this;
 		}
 
@@ -61,16 +59,16 @@ namespace StateNotifierServer.Services
 				}
 
 				_ct = context.RequestAborted;
-				using (var socket = await context.WebSockets.AcceptWebSocketAsync())
-				{
-					await ManageClientConnectionLoop(socket, _ct);
-				}
+				var socket = await context.WebSockets.AcceptWebSocketAsync();
+				await ManageClientConnectionLoop(socket, _ct);
 			}
 		}
 
 		private async Task ManageClientConnectionLoop(WebSocket socket, CancellationToken ct)
 		{
-			var clKey = new Guid();
+			await Task.Yield();
+
+			var clKey = Guid.NewGuid();
 			_notifier.Clients.Add(clKey, socket);
 
 			while (true)

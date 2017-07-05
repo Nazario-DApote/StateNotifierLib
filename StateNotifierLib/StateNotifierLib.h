@@ -11,7 +11,7 @@
 // STATENOTIFIERLIB_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
 
-#ifndef STATIC_LIB
+#ifndef STATENOTIFIERLIB_STATIC
 #ifdef STATENOTIFIERLIB_EXPORTS
 #define STATENOTIFIERLIB_API __declspec(dllexport)
 #define EXPIMP_TEMPLATE

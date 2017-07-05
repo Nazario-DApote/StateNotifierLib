@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace StateNotifierServer.Services
@@ -22,22 +23,32 @@ namespace StateNotifierServer.Services
 			_logger = logger;
 		}
 
-		public async Task Write(Message msg)
+		public void Write(Message msg)
 		{
 			if (_config.Enabled)
 			{
-				await Task.Yield(); // Make us async right away
-
-				var fname = string.Concat(
-					DateTime.Now.ToLocalTime().ToString("yyyy-MM-dd_HHmmss.fff."),
-					msg.ProcessName + msg.Instance.ToString(), ".",
-					msg.Command.ToString(),
-					".json");
-
 				if (!Directory.Exists(_config.Folder))
 					Directory.CreateDirectory(_config.Folder);
 
-				using (var fs = new FileStream(Path.Combine(_config.Folder, fname), FileMode.CreateNew, FileAccess.Write, FileShare.None))
+				string fPath;
+				var index = 0;
+				do
+				{
+					var fname = string.Concat(
+						DateTime.Now.ToLocalTime().ToString("yyyy-MM-dd_HHmmss.fff."),
+						msg.ProcessName + msg.Instance.ToString(), ".",
+						msg.Command.ToString(),
+						".",
+						index,
+						".json");
+
+					index++;
+					fPath = Path.Combine(_config.Folder, fname);
+
+				}
+				while (File.Exists(fPath)) ;
+
+				using (var fs = new FileStream(fPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
 				using (var ws = new StreamWriter(fs, Encoding.UTF8))
 				using (var writer = new JsonTextWriter(ws))
 				{

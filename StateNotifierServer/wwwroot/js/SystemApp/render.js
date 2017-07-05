@@ -27,8 +27,8 @@ var Canvas = function (windowWidth) {
 	this.windowWidth = windowWidth;
 	this.colSize = 80;
 	this.rowSize = 80;
-	this.spaceBetweenRows = 35;
-	this.spaceBetweenCols = 25;
+	this.spaceBetweenRows = 100;
+	this.spaceBetweenCols = 100;
 	this.Devices = [];   // array of Device objects
 	this.Events = [];   // array of Events objects
 };
@@ -63,7 +63,7 @@ function initializeMove() {
 				var colSize = canvas.colSize;
 				var rowSize = canvas.rowSize;
 				var devPosX = 0;
-				var devPosY = 20;
+				var devPosY = 60;
 				var steps = canvas.Devices.length;
 				var devStateHue = color('hsl(83, 100%, 50%, 1)'); // useful calculator: http://hslpicker.com/#9dff00
 				var devTextColor = color('red').darker();
@@ -157,7 +157,7 @@ function initializeMove() {
 						if (!renderedObjects.hasOwnProperty(stateSeqTextKey)) {
 							renderedObjects[stateSeqTextKey] = new Text(state.startTime).attr({
 								fontFamily: 'Arial, sans-serif',
-								fontSize: '2',
+								fontSize: '8',
 								textStrokeColor: 'black',
 								x: statePosX,
 								y: stateTextsPosY
@@ -173,7 +173,7 @@ function initializeMove() {
 								var value = state.parameters[property];
 								renderedObjects[stateParamTextKey] = new Text(property + ":" + value).attr({
 									fontFamily: 'Arial, sans-serif',
-									fontSize: '5',
+									fontSize: '8',
 									textStrokeColor: 'black',
 									x: statePosX,
 									y: paramStatePosY
@@ -255,7 +255,7 @@ function initializeMove() {
 								{
 									renderedObjects[ev.uuid + "_arrow"] = new Polygon(x2, y2 - R, 5, 3)
 										.attr({
-											fillColor: 'red',
+											fillColor: 'blue',
 											rotation: Math.PI / 180 * 180
 										}).addTo(stage);
 								}
@@ -268,7 +268,7 @@ function initializeMove() {
 								{
 									renderedObjects[ev.uuid + "_arrow"] = new Polygon(x2, y2 + R, 5, 3)
 										.attr({
-											fillColor: 'red',
+											fillColor: 'blue',
 											rotation: Math.PI / 180
 										}).addTo(stage);
 								}
@@ -279,8 +279,20 @@ function initializeMove() {
 							if (!renderedObjects[ev.uuid])
 							{
 								renderedObjects[ev.uuid] = new Path(p)
-									.stroke('red', 1)
+									.stroke('blue', 1)
 									.addTo(stage);
+							}
+
+							if (!renderedObjects[ev.uuid + "_bezText"])
+							{
+								renderedObjects[ev.uuid + "_bezText"] = new Text(ev.name).attr({
+									fontFamily: 'Arial, sans-serif',
+									fontSize: '8',
+									textFillColor: 'blue',
+									textStrokeColor: 'blue',
+									x: (x1 + x2) / 2,
+									y: (y1 - R - offbez + (y2 + R + offbez)) / 2
+								}).addTo(stage);
 							}
 						}
 					}

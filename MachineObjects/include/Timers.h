@@ -11,7 +11,7 @@
 using namespace std;
 #define INVALID_TIMER_ID	0
 
-namespace Macho 
+namespace Macho
 {
 struct strTimer;
 /* ************************************************************************** */
@@ -33,8 +33,8 @@ public:
 	void run();
 	// add a timer in secs
 	unsigned int addTimer( unsigned long iSecs, eTimerType type = OneShotTimer );
-	
-	
+
+
 	// kill timer
 	void killTimer( unsigned int id );
 	void killTimers();

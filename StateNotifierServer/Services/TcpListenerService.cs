@@ -12,12 +12,7 @@ using System.Threading.Tasks;
 
 namespace StateNotifierServer.Services
 {
-	public interface ITcpListener : IDisposable
-	{
-		void Listen();
-	}
-
-	internal class TcpListenerService : ITcpListener
+	internal class TcpListenerService
 	{
 		private const int BUFFER_SIZE = 500;
 
@@ -29,7 +24,7 @@ namespace StateNotifierServer.Services
 
 		private CancellationTokenSource _cancellationTokenSource;
 
-		private IWsNotifier _notifier;
+		private StateNotifierService _notifier;
 
 		private List<Task> _connections;
 
@@ -40,7 +35,7 @@ namespace StateNotifierServer.Services
 		public TcpListenerService(
 			IOptions<TcpListenerServiceConfig> options,
 			ILogger<TcpListenerService> logger,
-			IWsNotifier notifier,
+			StateNotifierService notifier,
 			JsonDump dump)
 		{
 			_config = options.Value;
@@ -157,7 +152,7 @@ namespace StateNotifierServer.Services
 				if (msgObj != null)
 				{
 					await _notifier.SendBroadCast(msgObj);
-					await _dump.Write(msgObj);
+					_dump.Write(msgObj);
 				}
 			}
 		}

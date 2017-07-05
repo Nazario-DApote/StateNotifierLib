@@ -169,7 +169,7 @@ protected:
 						// notify new state
 						stdnotif->EnterStatus("SM", string(stateMachine.currentState().name()), mp);
 						if(!_to.empty())
-							stdnotif->EventEmit("SM", "test", _to, std::map<string, string>());
+							stdnotif->EventEmit("SM", "AUTHORIZED", _to, std::map<string, string>());
 					}
 					else if (c == 'q' || c == 'Q')
 					{
@@ -189,7 +189,7 @@ protected:
 
 	//void OnConnected()
 	//{
-	//	poco_information(_logger, "Connected to the server via TCP\\IP: localhost:1466");
+	//	 poco_information(_logger, Poco::format("Connected to the server via TCP\\IP: %s:%d", _srvHost, _srvPort));
 	//}
 
 	//void OnDisconnected()

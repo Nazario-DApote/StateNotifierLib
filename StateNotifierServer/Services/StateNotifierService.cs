@@ -1,29 +1,29 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 
 namespace StateNotifierServer.Services
 {
-	interface IWsNotifier
+	class StateNotifierService
 	{
-		WebSocketMiddleware WebSocketService { get; set; }
-		Task SendBroadCast(Message msg);
-		Dictionary<Guid, WebSocket> Clients { get; set; }
-	}
+		private ConcurrentDictionary<Guid, WebSocket> _dict;
 
-	class StateNotifierService : IWsNotifier
-	{
-		public Dictionary<Guid, WebSocket> Clients { get; set; }
+		public StateNotifierService()
+		{
+			_dict = new ConcurrentDictionary<Guid, WebSocket>();
+		}
 
 		public WebSocketMiddleware WebSocketService { get; set; }
+		public IDictionary<Guid, WebSocket> Clients { get => _dict; }
 
 		public async Task SendBroadCast(Message msg)
 		{
-			foreach (var cl in Clients)
+			foreach (var cl in Clients.Values)
 			{
-				await WebSocketService.SendStringAsync(cl.Value, JsonConvert.SerializeObject(msg, Formatting.Indented), WebSocketService.CancelToken);
+				await WebSocketService.SendStringAsync(cl, JsonConvert.SerializeObject(msg, Formatting.Indented), WebSocketService.CancelToken);
 			}
 		}
 	}

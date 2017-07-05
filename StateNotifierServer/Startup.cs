@@ -33,16 +33,15 @@ namespace StateNotifierServer
 		{
 			// Add framework services.
 			services.AddMvc();
+
+			// Read services configuration
 			services.Configure<WebSocketMiddlewareConfig>(Configuration.GetSection("WebSocket"));
-
 			services.Configure<TcpListenerServiceConfig>(Configuration.GetSection("TcpSocket"));
-
 			services.Configure<JsonDumpOptions>(Configuration.GetSection("Dump"));
 
-			services.AddSingleton<IWsNotifier, StateNotifierService>();
-
+			// Initialize Services
+			services.AddSingleton<StateNotifierService>();
 			services.AddSingleton<JsonDump>();
-
 			services.AddSingleton<TcpListenerService>();
 		}
 
