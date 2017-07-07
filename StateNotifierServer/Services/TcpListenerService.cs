@@ -2,8 +2,10 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -12,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace StateNotifierServer.Services
 {
-	internal class TcpListenerService
+	internal class TcpListenerService : IDisposable
 	{
 		private const int BUFFER_SIZE = 500;
 
@@ -26,7 +28,7 @@ namespace StateNotifierServer.Services
 
 		private StateNotifierService _notifier;
 
-		private List<Task> _connections;
+		private Dictionary<TcpClient, Task> _connections;
 
 		private JsonDump _dump;
 
@@ -43,13 +45,17 @@ namespace StateNotifierServer.Services
 			_notifier = notifier;
 			_dump = dump;
 			_cancellationTokenSource = new CancellationTokenSource();
-			_connections = new List<Task>(); // pending connections
+			_connections = new Dictionary<TcpClient, Task>(); // pending connections
 			_listener = new TcpListener(IPAddress.Any, _config.Port);
 		}
 
 		public void Dispose()
 		{
 			_cancellationTokenSource.Cancel();
+
+			foreach (var c in _connections)
+				c.Key.Client.Shutdown(SocketShutdown.Both);
+
 			_listener.Stop();
 			_listener.Server.Dispose();
 		}
@@ -61,18 +67,28 @@ namespace StateNotifierServer.Services
 				_listener.Start();
 				_logger.LogInformation($"StateNotifier server service started at {IPAddress.Any}:{_config.Port}");
 
+				var ct = _cancellationTokenSource.Token;
+
 				// Continue listening.
-				while (true)
+				while (!ct.IsCancellationRequested)
 				{
 					_logger.LogInformation("Waiting for client...");
-					_cancellationTokenSource.Token.ThrowIfCancellationRequested();
+					ct.ThrowIfCancellationRequested();
 
-					var client = await _listener.AcceptTcpClientAsync();
-					_logger.LogInformation("[Server] Client has connected");
-					var task = StartHandleConnectionAsync(client, _cancellationTokenSource.Token);
-					// if already faulted, re-throw any error on the calling context
-					if (task.IsFaulted)
-						task.Wait();
+					try
+					{
+						var client = await _listener.AcceptTcpClientAsync();
+						_logger.LogInformation("[Server] Client has connected");
+						var task = StartHandleConnectionAsync(client, ct);
+						// if already faulted, re-throw any error on the calling context
+						if (task.IsFaulted)
+							task.Wait();
+					}
+					catch (ObjectDisposedException)
+					{
+						// server shutdown
+						break;
+					}
 				}
 			}
 		}
@@ -81,11 +97,11 @@ namespace StateNotifierServer.Services
 		private async Task StartHandleConnectionAsync(TcpClient tcpClient, CancellationToken ct)
 		{
 			// start the new connection task
-			var connectionTask = HandleConnectionAsync(tcpClient, _cancellationTokenSource.Token);
+			var connectionTask = HandleConnectionAsync(tcpClient, ct);
 
 			// add it to the list of pending task
 			lock (_lock)
-				_connections.Add(connectionTask);
+				_connections.Add(tcpClient, connectionTask);
 
 			// catch all errors of HandleConnectionAsync
 			try
@@ -103,7 +119,7 @@ namespace StateNotifierServer.Services
 			{
 				// remove pending task
 				lock (_lock)
-					_connections.Remove(connectionTask);
+					_connections.Remove(tcpClient);
 			}
 		}
 
@@ -113,7 +129,7 @@ namespace StateNotifierServer.Services
 			// continue asynchronously on another threads
 
 			_logger.LogInformation("Client connected. Waiting for data.");
-			while (true)
+			while (!ct.IsCancellationRequested)
 			{
 				ct.ThrowIfCancellationRequested();
 

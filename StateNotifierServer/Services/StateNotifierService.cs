@@ -23,7 +23,7 @@ namespace StateNotifierServer.Services
 		{
 			foreach (var cl in Clients.Values)
 			{
-				await WebSocketService.SendStringAsync(cl, JsonConvert.SerializeObject(msg, Formatting.Indented), WebSocketService.CancelToken);
+				await WebSocketService.SendStringAsync(cl, JsonConvert.SerializeObject(msg, Formatting.Indented));
 			}
 		}
 	}

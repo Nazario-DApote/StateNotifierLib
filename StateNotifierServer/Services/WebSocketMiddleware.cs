@@ -24,8 +24,6 @@ namespace StateNotifierServer.Services
 
 		private StateNotifierService _notifier;
 
-		public CancellationToken CancelToken { get { return _ct; } }
-
 		public WebSocketMiddleware(RequestDelegate next,
 			IOptions<WebSocketMiddlewareConfig> options,
 			ILogger<WebSocketMiddleware> logger,
@@ -36,15 +34,6 @@ namespace StateNotifierServer.Services
 			_logger = logger;
 			_notifier = notifier;
 			_notifier.WebSocketService = this;
-		}
-
-		private string GetJsonValue(JObject json, string key)
-		{
-			var jsonObj = json[key];
-			if (jsonObj != null)
-				return jsonObj.ToString();
-			else
-				return null;
 		}
 
 		public async Task Invoke(HttpContext context)
@@ -59,30 +48,47 @@ namespace StateNotifierServer.Services
 				}
 
 				_ct = context.RequestAborted;
-				var socket = await context.WebSockets.AcceptWebSocketAsync();
-				await ManageClientConnectionLoop(socket, _ct);
+				 var socket = await context.WebSockets.AcceptWebSocketAsync();
+				await HandleConnectionAsync(socket);
 			}
 		}
 
-		private async Task ManageClientConnectionLoop(WebSocket socket, CancellationToken ct)
+		private async Task HandleConnectionAsync(WebSocket socket)
 		{
 			await Task.Yield();
 
 			var clKey = Guid.NewGuid();
 			_notifier.Clients.Add(clKey, socket);
 
-			while (true)
+			while (!_ct.IsCancellationRequested)
 			{
+				_ct.ThrowIfCancellationRequested();
+
 				try
 				{
-					var jsonString = await ReceiveStringAsync(socket, ct);
-					_logger.LogInformation($"Received message: {jsonString}");
-
-					_logger.LogInformation(jsonString);
+					var jsonString = await ReceiveStringAsync(socket);
+					var json = JObject.Parse(jsonString);
+					if (json["command"] != null && json["command"].Value<string>().Equals("CLOSE"))
+					{
+						_logger.LogInformation($"Connection closed by peer: {jsonString}");
+						_notifier.Clients.Remove(clKey);
+						break;
+					}
+					else
+					{
+						// TODO: Client messages are not used
+						_logger.LogInformation($"Received message: {jsonString}");
+					}
 				}
 				catch (JsonException ex)
 				{
 					_logger.LogError(ex.Message);
+				}
+				catch (WebSocketException ex)
+				{
+					_logger.LogError(ex.Message);
+					_notifier.Clients.Remove(clKey);
+					break;
 				}
 				catch (Exception ex)
 				{
@@ -94,54 +100,39 @@ namespace StateNotifierServer.Services
 			}
 		}
 
-		private async Task CloseConnection(WebSocket socket, string reason, CancellationToken ct)
-		{
-			await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, reason, ct);
-		}
-
-		private static void CheckPayload(string payload)
-		{
-			if (payload == null)
-				throw new InvalidDataException("invalid payload");
-		}
-
-		private void CheckMessageId(string msgId)
-		{
-			if (string.IsNullOrEmpty(msgId))
-				throw new InvalidDataException("Invalid messageId");
-		}
-
-		public Task SendStringAsync(WebSocket socket, string data, CancellationToken ct = default(CancellationToken))
+		public async Task SendStringAsync(WebSocket socket, string data)
 		{
 			var buffer = Encoding.UTF8.GetBytes(data);
 			var segment = new ArraySegment<byte>(buffer);
-			return socket.SendAsync(segment, WebSocketMessageType.Text, true, ct);
+			await socket.SendAsync(segment, WebSocketMessageType.Text, true, _ct);
 		}
 
-		private async Task<string> ReceiveStringAsync(WebSocket socket, CancellationToken ct = default(CancellationToken))
+		private async Task<string> ReceiveStringAsync(WebSocket socket)
 		{
-			// Message can be sent by chunk.
-			// We must read all chunks before decoding the content
-			var buffer = new ArraySegment<byte>(new byte[8192]);
 			using (var ms = new MemoryStream())
 			{
+				// Message can be sent by chunk.
+				// We must read all chunks before decoding the content
+				var buffer = new ArraySegment<byte>(new byte[8192]);
 				WebSocketReceiveResult result;
 				do
 				{
-					ct.ThrowIfCancellationRequested();
+					_ct.ThrowIfCancellationRequested();
 
-					result = await socket.ReceiveAsync(buffer, ct);
-					ms.Write(buffer.Array, buffer.Offset, result.Count);
+					result = await socket.ReceiveAsync(buffer, _ct);
+					if (result.MessageType == WebSocketMessageType.Close)
+					{
+						_logger.LogInformation($"WS Connection closed: ${result.CloseStatusDescription}");
+						return $"{{\"messageId\":\"{Guid.NewGuid()}\",\"command\":\"CLOSE\"}}"; // close gracefully
+					}
+					else if (result.MessageType == WebSocketMessageType.Text)
+						ms.Write(buffer.Array, buffer.Offset, result.Count);
+					else
+						throw new WebSocketException("Unexpected message");
 				}
 				while (!result.EndOfMessage);
 
 				ms.Seek(0, SeekOrigin.Begin);
-
-				if (result.MessageType == WebSocketMessageType.Close)
-					return $"{{ \"messageId\":\"{Guid.NewGuid()}\", \"command\": \"CLOSE\" }}"; // close not gracefully
-
-				if (result.MessageType != WebSocketMessageType.Text)
-					throw new Exception("Unexpected message");
 
 				// Encoding UTF8: https://tools.ietf.org/html/rfc6455#section-5.6
 				using (var reader = new StreamReader(ms, Encoding.UTF8))
