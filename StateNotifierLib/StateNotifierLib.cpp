@@ -75,6 +75,23 @@ public:
 		{
 			ScopedLock<Mutex> lock(_mutexQueue);
 			_workQueue.push(msg);
+
+			// keep only last QUEUE_MAX_SIZE values
+			auto QUEUE_MAX_SIZE = 100;
+			if (_workQueue.size() > QUEUE_MAX_SIZE)
+			{
+				vector<string> vcopy(QUEUE_MAX_SIZE);
+				for (auto i = QUEUE_MAX_SIZE-1; i >= 0; --i)
+				{
+					vcopy[i] = _workQueue.front();
+					_workQueue.pop();
+				}
+				clearQueue();
+				for (auto it = vcopy.begin(); it != vcopy.end(); ++it)
+				{
+					_workQueue.push(*it);
+				}
+			}
 		}
 	}
 
