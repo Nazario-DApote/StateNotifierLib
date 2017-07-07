@@ -2,20 +2,7 @@
 //
 
 #include "stdafx.h"
-
-#include <queue>
-#include <algorithm>
-#include <memory>
 #include "StateNotifierLib.h"
-#include "Poco/JSON/Object.h"
-#include "Poco/Net/NetException.h"
-#include "Poco/Format.h"
-#include "Poco/Mutex.h"
-#include "Poco/ScopedLock.h"
-#include "Poco/Exception.h"
-#include "Poco/Net/SocketAddress.h"
-#include "Poco/Net/StreamSocket.h"
-#include "Poco/Buffer.h"
 
 using Poco::DateTimeFormatter;
 using Poco::DateTimeFormat;
@@ -31,8 +18,7 @@ using Poco::Net::StreamSocket;
 using Poco::Exception;
 using Poco::Net::NetException;
 using Poco::Buffer;
-
-using namespace std;
+using Poco::format;
 
 class CStateNotifierLib::CStateNotifierLibPimpl : public Runnable
 {
@@ -89,6 +75,27 @@ public:
 		{
 			ScopedLock<Mutex> lock(_mutexQueue);
 			_workQueue.push(msg);
+		}
+	}
+
+	void limitWorkingQueue()
+	{
+		ScopedLock<Mutex> lock(_mutexQueue);
+		// keep only last QUEUE_MAX_SIZE values
+		auto QUEUE_MAX_SIZE = 100;
+		if (_workQueue.size() > QUEUE_MAX_SIZE)
+		{
+			vector<string> vcopy(QUEUE_MAX_SIZE);
+			for (auto i = QUEUE_MAX_SIZE - 1; i >= 0; --i)
+			{
+				vcopy[i] = std::move(_workQueue.front());
+				_workQueue.pop();
+			}
+			clearQueue();
+			for (auto it = vcopy.begin(); it != vcopy.end(); ++it)
+			{
+				_workQueue.push(std::move(*it));
+			}
 		}
 	}
 
@@ -154,12 +161,10 @@ public:
 		_host = host;
 		_port = port;
 
-		if(!getConnected())
-		{
+		if (!getConnected())
 			return connect();
-		}
 
-		return false;
+		return true;
 	}
 
 	void stop()
@@ -198,35 +203,66 @@ public:
 		}
 	}
 
+	bool exponentialBackoffConnectionRetry(int& nRetry)
+	{
+		// update retry number
+		nRetry++;
+
+		// calculate delay through the Exponential Back-off Algorithm
+		// https://devcentral.f5.com/articles/implementing-the-exponential-backoff-algorithm-to-thwart-dictionary-attacks
+		auto e = ((1 << nRetry) - 1) / 2;
+		int maxDelay = 300; // 5min
+
+		// limit max delay
+		auto delay = e;
+		if (e > maxDelay)
+			delay = maxDelay;
+
+		// Notify retry and wait
+		notifyInfo(format("Server disconnected. Retrying in %d sec", delay));
+		Thread::sleep(delay * 1000);
+
+		// try to connect
+		return connect();
+	}
+
 	virtual void run()
 	{
 		_stop = false;
+		int nRetry = 0;
+		bool disconnectionNotified = false;
 
 		while (!_stop)
 		{
+			if (!getConnected())
+			{
+				limitWorkingQueue();
+
+				if (!disconnectionNotified)
+					notifyDisconnected();
+
+				if( !exponentialBackoffConnectionRetry(nRetry) )
+					continue;
+			}
+
+			nRetry = 0;
+			disconnectionNotified = false;
+
 			while (!_workQueue.empty())
 			{
-				ScopedLock<Mutex> lock(_mutexQueue);
 				try
 				{
+					ScopedLock<Mutex> lock(_mutexQueue);
 					auto msg = _workQueue.front(); // pick
 					sendMsg(msg);
-
-					finally([&]() { _workQueue.pop(); });
-					//_workQueue.pop(); // dequeue
+					//finally([&]() { _workQueue.pop(); });
+					_workQueue.pop(); // dequeue
 				}
 				catch (NetException& e)
 				{
 					notifyError(e.message());
-					if (!getConnected())
-						break;
+					break;
 				}
-			}
-
-			if (!getConnected())
-			{
-				stop();
-				break;
 			}
 
 			Thread::sleep(200);
@@ -259,7 +295,7 @@ void build_json(Object * const result,
 	result->set("process", process);
 	result->set("instance", instance);
 	result->set("name", name);
-	if(!sequence.empty())
+	if (!sequence.empty())
 		result->set("sequence", sequence);
 	result->set("type", type);
 	result->set("startTime", DateTimeFormatter::format(now, DateTimeFormat::ISO8601_FORMAT));
@@ -285,7 +321,7 @@ void CStateNotifierLib::EnterStatus(const string& sequence, const string& stateN
 {
 	auto json = auto_ptr<Object>(new Object);
 	build_json(json.get(), _pimpl->getProcess(), _pimpl->getInstance(), sequence, stateName, "ENTERSTATE", params);
-	ostringstream  os;
+	ostringstream os;
 	json->stringify(os, 1);
 	string s = os.str();
 	_pimpl->notifyInfo(s);
