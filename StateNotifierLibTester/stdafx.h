@@ -17,3 +17,14 @@
 #include <iostream>
 #include <string.h>
 #include <map>
+
+#include "Poco\Util\Application.h"
+#include "Poco\Util\Option.h"
+#include "Poco\Util\HelpFormatter.h"
+#include "Poco\Logger.h"
+#include "Poco\WindowsConsoleChannel.h"
+#include "Poco\FormattingChannel.h"
+#include "Poco\PatternFormatter.h"
+#include "Poco\AutoPtr.h"
+#include "Poco\String.h"
+#include "Poco\NumberParser.h"
